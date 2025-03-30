@@ -18,17 +18,18 @@ type RegisterRequest struct {
 	FirstName    string `json:"first_name"`
 	LastName     string `json:"last_name"`
 	Email        string `json:"email"`
+	University   string `json:"university"`
 	PasswordHash string `json:"password_hash"`
 }
 
 func (s *AuthStore) Register(ctx context.Context, request RegisterRequest) error {
 
 	query := `
-		INSERT INTO users (first_name, last_name, email, password_hash)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO users (first_name, last_name, email, university, password_hash)
+		VALUES ($1, $2, $3, $4, $5)
 	`
 
-	_, err := s.db.ExecContext(ctx, query, request.FirstName, request.LastName, request.Email, request.PasswordHash)
+	_, err := s.db.ExecContext(ctx, query, request.FirstName, request.LastName, request.Email, request.University, request.PasswordHash)
 	if err != nil {
 		return err
 	}

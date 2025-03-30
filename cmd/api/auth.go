@@ -16,6 +16,7 @@ type RegisterRequest struct {
 	FirstName       string `json:"first_name"`
 	LastName        string `json:"last_name"`
 	Email           string `json:"email"`
+	University      string `json:"university"`
 	Password        string `json:"password"`
 	PasswordConfirm string `json:"password_confirm"`
 }
@@ -64,7 +65,7 @@ func (app *application) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// store the user in the database
-	err = app.store.Auth.Register(ctx, store.RegisterRequest{FirstName: payload.FirstName, LastName: payload.LastName, Email: payload.Email, PasswordHash: hash})
+	err = app.store.Auth.Register(ctx, store.RegisterRequest{FirstName: payload.FirstName, LastName: payload.LastName, Email: payload.Email, University: payload.University, PasswordHash: hash})
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
 		return

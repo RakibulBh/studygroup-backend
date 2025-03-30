@@ -22,15 +22,9 @@ type dbConfig struct {
 	maxIdleTime  string
 }
 
-type llmConfig struct {
-	model  string
-	apiKey string
-}
-
 type config struct {
 	addr   string
 	db     dbConfig
-	llm    llmConfig
 	auth   auth
 	env    string
 	apiURL string
@@ -73,6 +67,16 @@ func (app *application) mount() http.Handler {
 			r.Post("/login", app.Login)
 			// r.Post("/logout", app.Logout)
 			r.Get("/refresh", app.Refresh)
+		})
+
+		r.Route("/groups", func(r chi.Router) {
+			r.Get("/", app.GetGroups)
+			r.Get("/{id}", app.GetGroup)
+		})
+
+		r.Route("/sessions", func(r chi.Router) {
+			r.Get("/", app.GetSessions)
+			r.Get("/{id}", app.GetSession)
 		})
 	})
 
