@@ -160,3 +160,17 @@ func (app *application) GetJoinedGroups(w http.ResponseWriter, r *http.Request) 
 func (app *application) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Group updated successfully", nil)
 }
+
+func (app *application) GetAllGroups(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(userCtx).(store.User)
+
+	ctx := r.Context()
+
+	groups, err := app.store.Group.GetAllGroups(ctx, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "All groups fetched successfully", groups)
+}

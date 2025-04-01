@@ -33,13 +33,14 @@ type Storage struct {
 		GetUserByEmail(ctx context.Context, email string) (UserData, error)
 	}
 	Group interface {
-		CreateGroup(ctx context.Context, group *Group) (string, error)
-		GetGroupByID(ctx context.Context, id string) (Group, error)
-		MakeAdmin(ctx context.Context, groupID string, userID int) error
+		GetAllGroups(ctx context.Context, userID int) ([]Group, error)
+		CreateGroup(ctx context.Context, group *Group) (int, error)
+		GetGroupByID(ctx context.Context, id int) (Group, error)
+		MakeAdmin(ctx context.Context, groupID int, userID int) error
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
 		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error)
-		JoinGroup(ctx context.Context, groupID string, userID int) error
-		LeaveGroup(ctx context.Context, groupID string, userID int) error
+		JoinGroup(ctx context.Context, groupID int, userID int) error
+		LeaveGroup(ctx context.Context, groupID int, userID int) error
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
 	}
 }
