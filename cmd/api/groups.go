@@ -130,6 +130,33 @@ func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Group searched successfully", groups)
 }
 
+func (app *application) JoinGroup(w http.ResponseWriter, r *http.Request) {
+	app.writeJSON(w, http.StatusOK, "Group joined successfully", nil)
+}
+
+func (app *application) LeaveGroup(w http.ResponseWriter, r *http.Request) {
+	app.writeJSON(w, http.StatusOK, "Group left successfully", nil)
+}
+
+// Get the user's joined groups
+func (app *application) GetJoinedGroups(w http.ResponseWriter, r *http.Request) {
+
+	// Get user id from context
+	user := r.Context().Value(userCtx).(store.User)
+
+	// Get group id from path
+	ctx := r.Context()
+
+	// Get joined groups
+	groups, err := app.store.Group.GetJoinedGroups(ctx, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Joined groups fetched successfully", groups)
+}
+
 func (app *application) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Group updated successfully", nil)
 }

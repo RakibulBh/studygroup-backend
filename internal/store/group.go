@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
 )
 
 type GroupStore struct {
@@ -150,7 +149,67 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 		var memberLimit sql.NullInt64
 		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
 		if err != nil {
-			fmt.Println("Error: ", err)
+			return nil, err
+		}
+
+		if memberLimit.Valid {
+			group.MemberLimit = int(memberLimit.Int64)
+		} else {
+			group.MemberLimit = 0
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}
+
+func (s *GroupStore) JoinGroup(ctx context.Context, groupID string, userID int) error {
+	query := `
+		INSERT INTO membership (user_id, group_id, status, role)
+		VALUES ($1, $2, 'member', 'member')
+	`
+
+	_, err := s.db.ExecContext(ctx, query, userID, groupID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *GroupStore) LeaveGroup(ctx context.Context, groupID string, userID int) error {
+	query := `
+		DELETE FROM membership WHERE user_id = $1 AND group_id = $2
+	`
+
+	_, err := s.db.ExecContext(ctx, query, userID, groupID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *GroupStore) GetJoinedGroups(ctx context.Context, userID int) ([]Group, error) {
+	query := `
+		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location
+		FROM groups g
+		JOIN membership m ON g.id = m.group_id
+		WHERE m.user_id = $1 AND m.role != 'admin'
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var groups []Group
+	for rows.Next() {
+		var group Group
+		var memberLimit sql.NullInt64
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location)
+		if err != nil {
 			return nil, err
 		}
 

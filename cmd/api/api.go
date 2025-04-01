@@ -72,6 +72,9 @@ func (app *application) mount() http.Handler {
 		r.Route("/groups", func(r chi.Router) {
 			r.Use(app.Authenticate)
 			r.Get("/", app.GetUserGroups)
+			r.Post("/join/{id}", app.JoinGroup)
+			r.Post("/leave/{id}", app.LeaveGroup)
+			r.Get("/joined", app.GetJoinedGroups)
 			r.Get("/{id}", app.GetGroup)
 			r.Post("/", app.CreateGroup)
 			r.Get("/search/{search_query}", app.SearchGroup)

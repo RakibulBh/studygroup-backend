@@ -38,6 +38,9 @@ type Storage struct {
 		MakeAdmin(ctx context.Context, groupID string, userID int) error
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
 		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error)
+		JoinGroup(ctx context.Context, groupID string, userID int) error
+		LeaveGroup(ctx context.Context, groupID string, userID int) error
+		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
 	}
 }
 
