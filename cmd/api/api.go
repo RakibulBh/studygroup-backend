@@ -89,6 +89,11 @@ func (app *application) mount() http.Handler {
 				r.Post("/leave", app.LeaveGroup)
 				r.Get("/members", app.GetGroupMembers)
 				r.Get("/", app.GetGroup)
+				r.Route("/requests", func(r chi.Router) {
+					r.Get("/", app.GetJoinRequests)
+					r.Post("/approve", app.ApproveJoinRequest)
+					r.Post("/reject", app.RejectJoinRequest)
+				})
 			})
 
 		})

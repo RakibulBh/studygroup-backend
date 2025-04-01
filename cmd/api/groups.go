@@ -204,11 +204,115 @@ func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Group searched successfully", groups)
 }
 
+func (app *application) UpdateGroup(w http.ResponseWriter, r *http.Request) {
+	app.writeJSON(w, http.StatusOK, "Group updated successfully", nil)
+}
+
+// Joining and leaving groups
 func (app *application) JoinGroup(w http.ResponseWriter, r *http.Request) {
-	app.writeJSON(w, http.StatusOK, "Group joined successfully", nil)
+	user := r.Context().Value(userCtx).(store.User)
+
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	err = app.store.Group.JoinRequest(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Group join request sent successfully", nil)
+}
+
+func (app *application) GetJoinRequests(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+
+	ctx := r.Context()
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	joinRequests, err := app.store.Group.GetJoinRequests(ctx, groupIDInt)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	app.writeJSON(w, http.StatusOK, "Join requests fetched successfully", joinRequests)
+}
+
+func (app *application) ApproveJoinRequest(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	user := r.Context().Value(userCtx).(store.User)
+
+	err = app.store.Group.ApproveJoinRequest(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Join request approved successfully", nil)
+}
+
+func (app *application) RejectJoinRequest(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	user := r.Context().Value(userCtx).(store.User)
+
+	err = app.store.Group.RejectJoinRequest(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Join request rejected successfully", nil)
 }
 
 func (app *application) LeaveGroup(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	user := r.Context().Value(userCtx).(store.User)
+
+	err = app.store.Group.LeaveGroup(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
 	app.writeJSON(w, http.StatusOK, "Group left successfully", nil)
 }
 
@@ -229,8 +333,4 @@ func (app *application) GetJoinedGroups(w http.ResponseWriter, r *http.Request) 
 	}
 
 	app.writeJSON(w, http.StatusOK, "Joined groups fetched successfully", groups)
-}
-
-func (app *application) UpdateGroup(w http.ResponseWriter, r *http.Request) {
-	app.writeJSON(w, http.StatusOK, "Group updated successfully", nil)
 }

@@ -40,10 +40,13 @@ type Storage struct {
 		GetGroupMembers(ctx context.Context, groupID int) ([]User, error)
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
 		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error)
-		JoinGroup(ctx context.Context, groupID int, userID int) error
 		LeaveGroup(ctx context.Context, groupID int, userID int) error
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
 		IsMember(ctx context.Context, groupID int, userID int) (bool, error)
+		JoinRequest(ctx context.Context, groupID int, userID int) error
+		GetJoinRequests(ctx context.Context, groupID int) ([]JoinRequest, error)
+		ApproveJoinRequest(ctx context.Context, groupID int, userID int) error
+		RejectJoinRequest(ctx context.Context, groupID int, userID int) error
 	}
 }
 

@@ -199,20 +199,6 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 	return groups, nil
 }
 
-func (s *GroupStore) JoinGroup(ctx context.Context, groupID int, userID int) error {
-	query := `
-		INSERT INTO membership (user_id, group_id, status, role)
-		VALUES ($1, $2, 'member', 'member')
-	`
-
-	_, err := s.db.ExecContext(ctx, query, userID, groupID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (s *GroupStore) LeaveGroup(ctx context.Context, groupID int, userID int) error {
 	query := `
 		DELETE FROM membership WHERE user_id = $1 AND group_id = $2
@@ -308,4 +294,77 @@ func (s *GroupStore) IsMember(ctx context.Context, groupID int, userID int) (boo
 	}
 
 	return exists, nil
+}
+
+// Join and leaving a group
+
+type JoinRequest struct {
+	ID      int    `json:"id"`
+	UserID  int    `json:"user_id"`
+	GroupID int    `json:"group_id"`
+	Status  string `json:"status"`
+}
+
+func (s *GroupStore) JoinRequest(ctx context.Context, groupID int, userID int) error {
+	query := `
+		INSERT INTO join_requests (user_id, group_id, status)
+		VALUES ($1, $2, 'pending')
+	`
+
+	_, err := s.db.ExecContext(ctx, query, userID, groupID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *GroupStore) GetJoinRequests(ctx context.Context, groupID int) ([]JoinRequest, error) {
+	query := `
+		SELECT * FROM join_requests WHERE group_id = $1
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	var joinRequests []JoinRequest
+	for rows.Next() {
+		var joinRequest JoinRequest
+		err := rows.Scan(&joinRequest.ID, &joinRequest.UserID, &joinRequest.GroupID, &joinRequest.Status)
+		if err != nil {
+			return nil, err
+		}
+
+		joinRequests = append(joinRequests, joinRequest)
+	}
+
+	return joinRequests, nil
+}
+
+func (s *GroupStore) ApproveJoinRequest(ctx context.Context, groupID int, userID int) error {
+	query := `
+		UPDATE join_requests SET status = 'approved' WHERE group_id = $1 AND user_id = $2
+	`
+
+	_, err := s.db.ExecContext(ctx, query, groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *GroupStore) RejectJoinRequest(ctx context.Context, groupID int, userID int) error {
+	query := `
+		UPDATE join_requests SET status = 'rejected' WHERE group_id = $1 AND user_id = $2
+	`
+
+	_, err := s.db.ExecContext(ctx, query, groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
