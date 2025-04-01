@@ -37,11 +37,13 @@ type Storage struct {
 		CreateGroup(ctx context.Context, group *Group) (int, error)
 		GetGroupByID(ctx context.Context, id int) (Group, error)
 		MakeAdmin(ctx context.Context, groupID int, userID int) error
+		GetGroupMembers(ctx context.Context, groupID int) ([]User, error)
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
 		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error)
 		JoinGroup(ctx context.Context, groupID int, userID int) error
 		LeaveGroup(ctx context.Context, groupID int, userID int) error
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
+		IsMember(ctx context.Context, groupID int, userID int) (bool, error)
 	}
 }
 

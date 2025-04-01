@@ -52,7 +52,7 @@ func (s *GroupStore) CreateGroup(ctx context.Context, group *Group) (int, error)
 
 func (s *GroupStore) GetGroupByID(ctx context.Context, id int) (Group, error) {
 	query := `
-		SELECT id, name, description, has_member_limit, member_limit, subject, location
+		SELECT id, name, description, has_member_limit, member_limit, subject, location, visibility
 		FROM groups
 		WHERE id = $1
 	`
@@ -60,9 +60,16 @@ func (s *GroupStore) GetGroupByID(ctx context.Context, id int) (Group, error) {
 	row := s.db.QueryRowContext(ctx, query, id)
 
 	var group Group
-	err := row.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &group.MemberLimit, &group.Subject, &group.Location)
+	var memberLimit sql.NullInt64
+	err := row.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
 	if err != nil {
 		return Group{}, err
+	}
+
+	if memberLimit.Valid {
+		group.MemberLimit = int(memberLimit.Int64)
+	} else {
+		group.MemberLimit = 0
 	}
 
 	return group, nil
@@ -80,11 +87,39 @@ func (s *GroupStore) MakeAdmin(ctx context.Context, groupID int, userID int) err
 	}
 
 	return nil
+
+}
+
+func (s *GroupStore) GetGroupMembers(ctx context.Context, groupID int) ([]User, error) {
+	query := `
+		SELECT u.id, u.first_name, u.last_name, u.email
+		FROM users u
+		JOIN membership m ON u.id = m.user_id
+		WHERE m.group_id = $1 AND (m.role = 'member' OR m.role = 'admin')
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	var members []User
+	for rows.Next() {
+		var member User
+		err := rows.Scan(&member.ID, &member.FirstName, &member.LastName, &member.Email)
+		if err != nil {
+			return nil, err
+		}
+
+		members = append(members, member)
+	}
+
+	return members, nil
 }
 
 func (s *GroupStore) GetUserGroups(ctx context.Context, userID int) ([]Group, error) {
 	query := `
-		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location
+		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location, g.visibility
 		FROM groups g
 		JOIN membership m ON g.id = m.group_id
 		WHERE m.user_id = $1 AND m.role = 'admin'
@@ -99,7 +134,7 @@ func (s *GroupStore) GetUserGroups(ctx context.Context, userID int) ([]Group, er
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location)
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +160,8 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 			g.has_member_limit,
 			g.member_limit,
 			g.subject,
-			g.location
+			g.location,
+			g.visibility
 		FROM
 			groups g
 		LEFT JOIN membership m ON g.id = m.group_id AND m.user_id = $1
@@ -146,7 +182,7 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location)
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +228,7 @@ func (s *GroupStore) LeaveGroup(ctx context.Context, groupID int, userID int) er
 
 func (s *GroupStore) GetJoinedGroups(ctx context.Context, userID int) ([]Group, error) {
 	query := `
-		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location
+		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location, g.visibility
 		FROM groups g
 		JOIN membership m ON g.id = m.group_id
 		WHERE m.user_id = $1 AND m.role != 'admin'
@@ -207,7 +243,7 @@ func (s *GroupStore) GetJoinedGroups(ctx context.Context, userID int) ([]Group, 
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location)
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
 		if err != nil {
 			return nil, err
 		}
@@ -226,7 +262,7 @@ func (s *GroupStore) GetJoinedGroups(ctx context.Context, userID int) ([]Group, 
 
 func (s *GroupStore) GetAllGroups(ctx context.Context, userID int) ([]Group, error) {
 	query := `
-		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location
+		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location, g.visibility
 		FROM groups g
 		WHERE g.visibility = 'public'
 	`
@@ -240,7 +276,7 @@ func (s *GroupStore) GetAllGroups(ctx context.Context, userID int) ([]Group, err
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location)
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
 		if err != nil {
 			fmt.Println(err)
 			return nil, err
@@ -256,4 +292,20 @@ func (s *GroupStore) GetAllGroups(ctx context.Context, userID int) ([]Group, err
 	}
 
 	return groups, nil
+}
+
+func (s *GroupStore) IsMember(ctx context.Context, groupID int, userID int) (bool, error) {
+	query := `
+		SELECT EXISTS(SELECT 1 FROM membership WHERE group_id = $1 AND user_id = $2)
+	`
+
+	row := s.db.QueryRowContext(ctx, query, groupID, userID)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }

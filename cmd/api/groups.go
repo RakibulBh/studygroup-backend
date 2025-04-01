@@ -4,17 +4,91 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/RakibulBh/studygroup-backend/internal/store"
 	"github.com/go-chi/chi/v5"
 )
 
-func (app *application) GetGroups(w http.ResponseWriter, r *http.Request) {
-	app.writeJSON(w, http.StatusOK, "Groups fetched successfully", nil)
+// Get a group by id
+func (app *application) GetGroup(w http.ResponseWriter, r *http.Request) {
+	// Get group id from path
+	groupID := chi.URLParam(r, "id")
+
+	// Convert groupID to int
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Get group from store
+	group, err := app.store.Group.GetGroupByID(ctx, groupIDInt)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	// Get user id from context
+	fmt.Println("Group: ", group)
+
+	app.writeJSON(w, http.StatusOK, "Group fetched successfully", group)
 }
 
-func (app *application) GetGroup(w http.ResponseWriter, r *http.Request) {
-	app.writeJSON(w, http.StatusOK, "Group fetched successfully", nil)
+func (app *application) GetAllGroups(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(userCtx).(store.User)
+
+	ctx := r.Context()
+
+	groups, err := app.store.Group.GetAllGroups(ctx, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "All groups fetched successfully", groups)
+}
+
+func (app *application) GetGroupMembers(w http.ResponseWriter, r *http.Request) {
+
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	group, err := app.store.Group.GetGroupByID(ctx, groupIDInt)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	members, err := app.store.Group.GetGroupMembers(ctx, group.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	user := r.Context().Value(userCtx).(store.User)
+
+	// Check if the user is allowed to see this group
+	isMember, err := app.store.Group.IsMember(ctx, group.ID, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if group.Visibility == "private" && !isMember {
+		app.writeJSON(w, http.StatusForbidden, "not allowed", nil)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Group members fetched successfully", members)
 }
 
 type CreateGroupRequest struct {
@@ -159,18 +233,4 @@ func (app *application) GetJoinedGroups(w http.ResponseWriter, r *http.Request) 
 
 func (app *application) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Group updated successfully", nil)
-}
-
-func (app *application) GetAllGroups(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(userCtx).(store.User)
-
-	ctx := r.Context()
-
-	groups, err := app.store.Group.GetAllGroups(ctx, user.ID)
-	if err != nil {
-		app.internalServerErrorResponse(w, r, err)
-		return
-	}
-
-	app.writeJSON(w, http.StatusOK, "All groups fetched successfully", groups)
 }

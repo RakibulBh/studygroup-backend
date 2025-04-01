@@ -69,17 +69,28 @@ func (app *application) mount() http.Handler {
 			r.Get("/refresh", app.Refresh)
 		})
 
+		r.Route("/user", func(r chi.Router) {
+			r.Use(app.Authenticate)
+			r.Get("/", app.GetUser)
+		})
+
 		r.Route("/groups", func(r chi.Router) {
 			r.Use(app.Authenticate)
-			r.Get("/", app.GetUserGroups)
 			r.Get("/all", app.GetAllGroups)
-			r.Post("/join/{id}", app.JoinGroup)
-			r.Post("/leave/{id}", app.LeaveGroup)
+			r.Get("/", app.GetUserGroups)
 			r.Get("/joined", app.GetJoinedGroups)
-			r.Get("/{id}", app.GetGroup)
 			r.Post("/", app.CreateGroup)
 			r.Get("/search/{search_query}", app.SearchGroup)
 			r.Put("/{id}", app.UpdateGroup)
+
+			// Group routes /groups/id
+			r.Route("/{id}", func(r chi.Router) {
+				r.Post("/join", app.JoinGroup)
+				r.Post("/leave", app.LeaveGroup)
+				r.Get("/members", app.GetGroupMembers)
+				r.Get("/", app.GetGroup)
+			})
+
 		})
 
 		r.Route("/sessions", func(r chi.Router) {

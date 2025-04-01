@@ -203,3 +203,8 @@ func (app *application) Refresh(w http.ResponseWriter, r *http.Request) {
 		app.internalServerErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) GetUser(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(userCtx).(store.User)
+	app.writeJSON(w, http.StatusOK, "user fetched successfully", user)
+}

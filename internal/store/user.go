@@ -23,11 +23,11 @@ type UserData struct {
 }
 
 type User struct {
-	ID         int
-	FirstName  string
-	LastName   string
-	Email      string
-	University string
+	ID         int    `json:"id"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Email      string `json:"email"`
+	University string `json:"university"`
 }
 
 func (s *UserStore) GetUserByID(ctx context.Context, id int) (User, error) {
