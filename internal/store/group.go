@@ -117,28 +117,26 @@ func (s *GroupStore) GetUserGroups(ctx context.Context, userID int) ([]Group, er
 
 func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error) {
 	query := `
-        SELECT 
-            groups.id, 
-            groups.name, 
-            groups.description, 
-            groups.has_member_limit, 
-            groups.member_limit, 
-            groups.subject, 
-            groups.location,
-            groups.visibility
-        FROM groups
-		JOIN membership m ON groups.id = m.group_id
-        WHERE groups.name ILIKE '%' || $1 || '%' 
-          AND visibility = 'public'
-		  AND NOT EXISTS (
-			SELECT 1 FROM membership 
-			WHERE group_id = groups.id AND user_id = $2
-		  )
-        ORDER BY 
-            name ASC
+       SELECT
+			g.id,
+			g.name,
+			g.description,
+			g.has_member_limit,
+			g.member_limit,
+			g.subject,
+			g.location
+		FROM
+			groups g
+		LEFT JOIN membership m ON g.id = m.group_id AND m.user_id = $1
+		WHERE
+			g.name ILIKE '%' || $2 || '%'
+			AND g.visibility = 'public'
+			AND m.user_id IS NULL  -- More efficient than NOT EXISTS
+		ORDER BY
+			g.name ASC
     `
 
-	rows, err := s.db.QueryContext(ctx, query, searchQuery, userID)
+	rows, err := s.db.QueryContext(ctx, query, userID, searchQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +145,7 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location)
 		if err != nil {
 			return nil, err
 		}
