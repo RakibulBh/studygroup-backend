@@ -37,6 +37,7 @@ type Storage struct {
 		GetGroupByID(ctx context.Context, id string) (Group, error)
 		MakeAdmin(ctx context.Context, groupID string, userID int) error
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
+		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error)
 	}
 }
 

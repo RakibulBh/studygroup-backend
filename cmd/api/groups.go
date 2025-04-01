@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/RakibulBh/studygroup-backend/internal/store"
+	"github.com/go-chi/chi/v5"
 )
 
 func (app *application) GetGroups(w http.ResponseWriter, r *http.Request) {
@@ -23,6 +24,7 @@ type CreateGroupRequest struct {
 	MemberLimit    int    `json:"member_limit"`
 	Subject        string `json:"subject"`
 	Location       string `json:"location"`
+	Visibility     string `json:"visibility"`
 }
 
 func (app *application) CreateGroup(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +44,12 @@ func (app *application) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	// Verify empty data
 	if payload.Name == "" || payload.Description == "" || payload.Subject == "" || payload.Location == "" {
 		app.badRequestResponse(w, r, errors.New("invalid request"))
+		return
+	}
+
+	// Verify values
+	if payload.Visibility != "public" && payload.Visibility != "private" {
+		app.badRequestResponse(w, r, errors.New("invalid visibility value"))
 		return
 	}
 
@@ -100,6 +108,26 @@ func (app *application) GetUserGroups(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Groups: ", groups)
 
 	app.writeJSON(w, http.StatusOK, "Groups fetched successfully", groups)
+}
+
+func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
+
+	// Get search query from path
+	searchQuery := chi.URLParam(r, "search_query")
+
+	ctx := r.Context()
+
+	// Get user id from context
+	user := r.Context().Value(userCtx).(store.User)
+
+	// Search for group
+	groups, err := app.store.Group.SearchGroup(ctx, searchQuery, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Group searched successfully", groups)
 }
 
 func (app *application) UpdateGroup(w http.ResponseWriter, r *http.Request) {

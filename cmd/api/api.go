@@ -74,6 +74,7 @@ func (app *application) mount() http.Handler {
 			r.Get("/", app.GetUserGroups)
 			r.Get("/{id}", app.GetGroup)
 			r.Post("/", app.CreateGroup)
+			r.Get("/search/{search_query}", app.SearchGroup)
 			r.Put("/{id}", app.UpdateGroup)
 		})
 

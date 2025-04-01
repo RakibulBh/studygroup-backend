@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type GroupStore struct {
@@ -16,6 +17,7 @@ type Group struct {
 	HasMemberLimit bool   `json:"has_member_limit"`
 	MemberLimit    int    `json:"member_limit"`
 	Subject        string `json:"subject"`
+	Visibility     string `json:"visibility"`
 	Location       string `json:"location"`
 }
 
@@ -25,21 +27,21 @@ func (s *GroupStore) CreateGroup(ctx context.Context, group *Group) (string, err
 
 	if group.MemberLimit == 0 {
 		query = `
-			INSERT INTO groups (name, description, has_member_limit, subject, location)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO groups (name, description, has_member_limit, subject, location, visibility)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING id
 		`
-		err := s.db.QueryRowContext(ctx, query, group.Name, group.Description, group.HasMemberLimit, group.Subject, group.Location).Scan(&id)
+		err := s.db.QueryRowContext(ctx, query, group.Name, group.Description, group.HasMemberLimit, group.Subject, group.Location, group.Visibility).Scan(&id)
 		if err != nil {
 			return "", err
 		}
 	} else {
 		query = `
-			INSERT INTO groups (name, description, has_member_limit, member_limit, subject, location)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			INSERT INTO groups (name, description, has_member_limit, member_limit, subject, location, visibility)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id
 		`
-		err := s.db.QueryRowContext(ctx, query, group.Name, group.Description, group.HasMemberLimit, group.MemberLimit, group.Subject, group.Location).Scan(&id)
+		err := s.db.QueryRowContext(ctx, query, group.Name, group.Description, group.HasMemberLimit, group.MemberLimit, group.Subject, group.Location, group.Visibility).Scan(&id)
 		if err != nil {
 			return "", err
 		}
@@ -99,6 +101,56 @@ func (s *GroupStore) GetUserGroups(ctx context.Context, userID int) ([]Group, er
 		var memberLimit sql.NullInt64
 		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location)
 		if err != nil {
+			return nil, err
+		}
+
+		if memberLimit.Valid {
+			group.MemberLimit = int(memberLimit.Int64)
+		} else {
+			group.MemberLimit = 0
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}
+
+func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error) {
+	query := `
+        SELECT 
+            groups.id, 
+            groups.name, 
+            groups.description, 
+            groups.has_member_limit, 
+            groups.member_limit, 
+            groups.subject, 
+            groups.location,
+            groups.visibility
+        FROM groups
+		JOIN membership m ON groups.id = m.group_id
+        WHERE groups.name ILIKE '%' || $1 || '%' 
+          AND visibility = 'public'
+		  AND NOT EXISTS (
+			SELECT 1 FROM membership 
+			WHERE group_id = groups.id AND user_id = $2
+		  )
+        ORDER BY 
+            name ASC
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, searchQuery, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var groups []Group
+	for rows.Next() {
+		var group Group
+		var memberLimit sql.NullInt64
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
+		if err != nil {
+			fmt.Println("Error: ", err)
 			return nil, err
 		}
 
