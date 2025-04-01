@@ -262,9 +262,22 @@ func (app *application) GetJoinRequests(w http.ResponseWriter, r *http.Request) 
 	app.writeJSON(w, http.StatusOK, "Join requests fetched successfully", joinRequests)
 }
 
+// Approve join request
+type ApproveJoinRequestRequest struct {
+	UserID  int  `json:"user_id"`
+	Approve bool `json:"approve"`
+}
+
 func (app *application) ApproveJoinRequest(w http.ResponseWriter, r *http.Request) {
 	groupID := chi.URLParam(r, "id")
 
+	var payload ApproveJoinRequestRequest
+	err := app.readJSON(r, &payload)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
 	groupIDInt, err := strconv.Atoi(groupID)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
@@ -275,7 +288,7 @@ func (app *application) ApproveJoinRequest(w http.ResponseWriter, r *http.Reques
 
 	user := r.Context().Value(userCtx).(store.User)
 
-	// Check if the user is the admin of the group
+	// Check if the user is the admin of the group, is he allowed to approve/reject?
 	isAdmin, err := app.store.Group.IsAdmin(ctx, groupIDInt, user.ID)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
@@ -286,45 +299,21 @@ func (app *application) ApproveJoinRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = app.store.Group.ApproveJoinRequest(ctx, groupIDInt, user.ID)
-	if err != nil {
-		app.internalServerErrorResponse(w, r, err)
-		return
+	if payload.Approve {
+		err = app.store.Group.ApproveJoinRequest(ctx, groupIDInt, payload.UserID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
+	} else {
+		err = app.store.Group.RejectJoinRequest(ctx, groupIDInt, payload.UserID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
 	}
 
 	app.writeJSON(w, http.StatusOK, "Join request approved successfully", nil)
-}
-
-func (app *application) RejectJoinRequest(w http.ResponseWriter, r *http.Request) {
-	groupID := chi.URLParam(r, "id")
-
-	groupIDInt, err := strconv.Atoi(groupID)
-	if err != nil {
-		app.badRequestResponse(w, r, err)
-		return
-	}
-
-	// Check if the user is the admin of the group
-	user := r.Context().Value(userCtx).(store.User)
-	ctx := r.Context()
-
-	isAdmin, err := app.store.Group.IsAdmin(ctx, groupIDInt, user.ID)
-	if err != nil {
-		app.internalServerErrorResponse(w, r, err)
-		return
-	}
-	if !isAdmin {
-		app.writeJSON(w, http.StatusForbidden, "not allowed", nil)
-		return
-	}
-
-	err = app.store.Group.RejectJoinRequest(ctx, groupIDInt, user.ID)
-	if err != nil {
-		app.internalServerErrorResponse(w, r, err)
-		return
-	}
-
-	app.writeJSON(w, http.StatusOK, "Join request rejected successfully", nil)
 }
 
 func (app *application) LeaveGroup(w http.ResponseWriter, r *http.Request) {

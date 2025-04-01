@@ -39,7 +39,7 @@ type Storage struct {
 		MakeAdmin(ctx context.Context, groupID int, userID int) error
 		GetGroupMembers(ctx context.Context, groupID int) ([]User, error)
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
-		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error)
+		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]GroupWithMetadata, error)
 		LeaveGroup(ctx context.Context, groupID int, userID int) error
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
 		JoinRequest(ctx context.Context, groupID int, userID int) error
@@ -48,6 +48,7 @@ type Storage struct {
 		RejectJoinRequest(ctx context.Context, groupID int, userID int) error
 		IsMember(ctx context.Context, groupID int, userID int) (bool, error)
 		IsAdmin(ctx context.Context, groupID int, userID int) (bool, error)
+		IsJoinRequested(ctx context.Context, groupID int, userID int) (bool, error)
 	}
 }
 

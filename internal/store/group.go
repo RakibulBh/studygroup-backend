@@ -21,6 +21,15 @@ type Group struct {
 	Location       string `json:"location"`
 }
 
+type GroupWithMetadata struct {
+	Group
+	Metadata GroupMetadata `json:"metadata"`
+}
+
+type GroupMetadata struct {
+	JoinRequested bool `json:"join_requested"`
+}
+
 func (s *GroupStore) CreateGroup(ctx context.Context, group *Group) (int, error) {
 	var query string
 	var id int
@@ -151,7 +160,7 @@ func (s *GroupStore) GetUserGroups(ctx context.Context, userID int) ([]Group, er
 	return groups, nil
 }
 
-func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error) {
+func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID int) ([]GroupWithMetadata, error) {
 	query := `
        SELECT
 			g.id,
@@ -168,7 +177,7 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 		WHERE
 			g.name ILIKE '%' || $2 || '%'
 			AND g.visibility = 'public'
-			AND m.user_id IS NULL  -- More efficient than NOT EXISTS
+			AND m.user_id IS NULL
 		ORDER BY
 			g.name ASC
     `
@@ -178,7 +187,7 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 		return nil, err
 	}
 
-	var groups []Group
+	var groups []GroupWithMetadata
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
@@ -193,10 +202,37 @@ func (s *GroupStore) SearchGroup(ctx context.Context, searchQuery string, userID
 			group.MemberLimit = 0
 		}
 
-		groups = append(groups, group)
+		// Verify if the user requested for the group already
+		joinRequested, err := s.IsJoinRequested(ctx, group.ID, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		groups = append(groups, GroupWithMetadata{
+			Group: group,
+			Metadata: GroupMetadata{
+				JoinRequested: joinRequested,
+			},
+		})
 	}
 
 	return groups, nil
+}
+
+func (s *GroupStore) IsJoinRequested(ctx context.Context, groupID int, userID int) (bool, error) {
+	query := `
+		SELECT EXISTS(SELECT 1 FROM join_requests WHERE group_id = $1 AND user_id = $2)
+	`
+
+	row := s.db.QueryRowContext(ctx, query, groupID, userID)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
 
 func (s *GroupStore) LeaveGroup(ctx context.Context, groupID int, userID int) error {
