@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/RakibulBh/studygroup-backend/internal/constants"
 	"github.com/RakibulBh/studygroup-backend/internal/store"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -51,13 +53,19 @@ func (app *application) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify University exists
+	if !slices.Contains(constants.Universities, payload.University) {
+		app.badRequestResponse(w, r, errors.New("invalid university"))
+		return
+	}
+
 	// validate password matches
 	if payload.Password != payload.PasswordConfirm {
 		app.badRequestResponse(w, r, errors.New("password does not match"))
 		return
 	}
 
-	// Hash the passowrd
+	// Hash the passoword
 	hash, err := app.store.Auth.HashPassword(payload.Password)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)

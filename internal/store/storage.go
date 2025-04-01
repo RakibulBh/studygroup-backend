@@ -32,11 +32,18 @@ type Storage struct {
 		GetUserByID(ctx context.Context, id int) (User, error)
 		GetUserByEmail(ctx context.Context, email string) (UserData, error)
 	}
+	Group interface {
+		CreateGroup(ctx context.Context, group *Group) (string, error)
+		GetGroupByID(ctx context.Context, id string) (Group, error)
+		MakeAdmin(ctx context.Context, groupID string, userID int) error
+		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Auth: &AuthStore{db: db},
-		User: &UserStore{db: db},
+		Auth:  &AuthStore{db: db},
+		User:  &UserStore{db: db},
+		Group: &GroupStore{db: db},
 	}
 }

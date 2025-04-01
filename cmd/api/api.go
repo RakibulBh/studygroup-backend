@@ -70,8 +70,11 @@ func (app *application) mount() http.Handler {
 		})
 
 		r.Route("/groups", func(r chi.Router) {
-			r.Get("/", app.GetGroups)
+			r.Use(app.Authenticate)
+			r.Get("/", app.GetUserGroups)
 			r.Get("/{id}", app.GetGroup)
+			r.Post("/", app.CreateGroup)
+			r.Put("/{id}", app.UpdateGroup)
 		})
 
 		r.Route("/sessions", func(r chi.Router) {
