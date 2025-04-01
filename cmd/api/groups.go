@@ -356,3 +356,25 @@ func (app *application) GetJoinedGroups(w http.ResponseWriter, r *http.Request) 
 
 	app.writeJSON(w, http.StatusOK, "Joined groups fetched successfully", groups)
 }
+
+func (app *application) IsAdmin(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	user := r.Context().Value(userCtx).(store.User)
+
+	isAdmin, err := app.store.Group.IsAdmin(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Is admin", isAdmin)
+}

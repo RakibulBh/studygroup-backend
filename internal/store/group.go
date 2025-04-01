@@ -86,8 +86,8 @@ func (s *GroupStore) GetGroupByID(ctx context.Context, id int) (Group, error) {
 
 func (s *GroupStore) MakeAdmin(ctx context.Context, groupID int, userID int) error {
 	query := `
-		INSERT INTO membership (user_id, group_id, status, role)
-		VALUES ($1, $2, 'member', 'admin')
+		INSERT INTO membership (user_id, group_id, role)
+		VALUES ($1, $2, 'admin')
 	`
 
 	_, err := s.db.ExecContext(ctx, query, userID, groupID)
