@@ -42,11 +42,12 @@ type Storage struct {
 		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]Group, error)
 		LeaveGroup(ctx context.Context, groupID int, userID int) error
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
-		IsMember(ctx context.Context, groupID int, userID int) (bool, error)
 		JoinRequest(ctx context.Context, groupID int, userID int) error
 		GetJoinRequests(ctx context.Context, groupID int) ([]JoinRequest, error)
 		ApproveJoinRequest(ctx context.Context, groupID int, userID int) error
 		RejectJoinRequest(ctx context.Context, groupID int, userID int) error
+		IsMember(ctx context.Context, groupID int, userID int) (bool, error)
+		IsAdmin(ctx context.Context, groupID int, userID int) (bool, error)
 	}
 }
 

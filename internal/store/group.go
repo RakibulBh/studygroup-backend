@@ -280,6 +280,24 @@ func (s *GroupStore) GetAllGroups(ctx context.Context, userID int) ([]Group, err
 	return groups, nil
 }
 
+// ROLE CHECKS
+
+func (s *GroupStore) IsAdmin(ctx context.Context, groupID int, userID int) (bool, error) {
+	query := `
+		SELECT EXISTS(SELECT 1 FROM membership WHERE group_id = $1 AND user_id = $2 AND role = 'admin')
+	`
+
+	row := s.db.QueryRowContext(ctx, query, groupID, userID)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 func (s *GroupStore) IsMember(ctx context.Context, groupID int, userID int) (bool, error) {
 	query := `
 		SELECT EXISTS(SELECT 1 FROM membership WHERE group_id = $1 AND user_id = $2)
@@ -345,10 +363,20 @@ func (s *GroupStore) GetJoinRequests(ctx context.Context, groupID int) ([]JoinRe
 
 func (s *GroupStore) ApproveJoinRequest(ctx context.Context, groupID int, userID int) error {
 	query := `
-		UPDATE join_requests SET status = 'approved' WHERE group_id = $1 AND user_id = $2
+		DELETE FROM join_requests WHERE group_id = $1 AND user_id = $2
 	`
 
 	_, err := s.db.ExecContext(ctx, query, groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	query = `
+		INSERT INTO membership (user_id, group_id, status, role)
+		VALUES ($1, $2, 'member', 'member')
+	`
+
+	_, err = s.db.ExecContext(ctx, query, userID, groupID)
 	if err != nil {
 		return err
 	}
@@ -358,7 +386,7 @@ func (s *GroupStore) ApproveJoinRequest(ctx context.Context, groupID int, userID
 
 func (s *GroupStore) RejectJoinRequest(ctx context.Context, groupID int, userID int) error {
 	query := `
-		UPDATE join_requests SET status = 'rejected' WHERE group_id = $1 AND user_id = $2
+		DELETE FROM join_requests WHERE group_id = $1 AND user_id = $2
 	`
 
 	_, err := s.db.ExecContext(ctx, query, groupID, userID)

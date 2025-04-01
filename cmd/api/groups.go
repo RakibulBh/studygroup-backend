@@ -242,6 +242,18 @@ func (app *application) GetJoinRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Check if the user is the admin of the group
+	user := r.Context().Value(userCtx).(store.User)
+	isAdmin, err := app.store.Group.IsAdmin(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if !isAdmin {
+		app.writeJSON(w, http.StatusForbidden, "not allowed", nil)
+		return
+	}
+
 	joinRequests, err := app.store.Group.GetJoinRequests(ctx, groupIDInt)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
@@ -263,6 +275,17 @@ func (app *application) ApproveJoinRequest(w http.ResponseWriter, r *http.Reques
 
 	user := r.Context().Value(userCtx).(store.User)
 
+	// Check if the user is the admin of the group
+	isAdmin, err := app.store.Group.IsAdmin(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if !isAdmin {
+		app.writeJSON(w, http.StatusForbidden, "not allowed", nil)
+		return
+	}
+
 	err = app.store.Group.ApproveJoinRequest(ctx, groupIDInt, user.ID)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
@@ -281,9 +304,19 @@ func (app *application) RejectJoinRequest(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Check if the user is the admin of the group
+	user := r.Context().Value(userCtx).(store.User)
 	ctx := r.Context()
 
-	user := r.Context().Value(userCtx).(store.User)
+	isAdmin, err := app.store.Group.IsAdmin(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if !isAdmin {
+		app.writeJSON(w, http.StatusForbidden, "not allowed", nil)
+		return
+	}
 
 	err = app.store.Group.RejectJoinRequest(ctx, groupIDInt, user.ID)
 	if err != nil {
