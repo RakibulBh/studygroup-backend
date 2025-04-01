@@ -99,8 +99,10 @@ func (app *application) mount() http.Handler {
 		})
 
 		r.Route("/sessions", func(r chi.Router) {
-			r.Get("/", app.GetSessions)
-			r.Get("/{id}", app.GetSession)
+			r.Use(app.Authenticate)
+			r.Post("/{groupID}", app.CreateStudySession)
+			r.Get("/{groupID}", app.GetGroupStudySessions)
+			r.Get("/user", app.GetUserStudySessions)
 		})
 	})
 

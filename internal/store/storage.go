@@ -50,12 +50,18 @@ type Storage struct {
 		IsAdmin(ctx context.Context, groupID int, userID int) (bool, error)
 		IsJoinRequested(ctx context.Context, groupID int, userID int) (bool, error)
 	}
+	Session interface {
+		CreateStudySession(ctx context.Context, session *StudySession) (int, error)
+		GetUserStudySessions(ctx context.Context, userID int) ([]StudySession, error)
+		GetGroupStudySessions(ctx context.Context, groupID int) ([]StudySession, error)
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Auth:  &AuthStore{db: db},
-		User:  &UserStore{db: db},
-		Group: &GroupStore{db: db},
+		Auth:    &AuthStore{db: db},
+		User:    &UserStore{db: db},
+		Group:   &GroupStore{db: db},
+		Session: &SessionStore{db: db},
 	}
 }
