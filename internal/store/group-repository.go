@@ -239,3 +239,11 @@ func (s *GroupRepository) GetAllGroups(ctx context.Context) ([]Group, error) {
 
 	return groups, nil
 }
+
+func (s *GroupRepository) DeleteGroup(ctx context.Context, groupID int) error {
+	query := `
+		DELETE FROM groups WHERE id = $1
+	`
+	_, err := s.db.ExecContext(ctx, query, groupID)
+	return err
+}

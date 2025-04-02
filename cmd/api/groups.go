@@ -545,3 +545,36 @@ func (app *application) ResolveInvitation(w http.ResponseWriter, r *http.Request
 
 	app.writeJSON(w, http.StatusOK, fmt.Sprintf("Invitation %s successfully", action), nil)
 }
+
+// delete group
+func (app *application) DeleteGroup(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+	user := r.Context().Value(userCtx).(store.User)
+
+	// Check if user is admin
+	isAdmin, err := app.store.GroupMembership.IsAdmin(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if !isAdmin {
+		app.writeJSON(w, http.StatusForbidden, "not allowed", nil)
+		return
+	}
+
+	err = app.store.GroupRepository.DeleteGroup(ctx, groupIDInt)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Group deleted successfully", nil)
+}

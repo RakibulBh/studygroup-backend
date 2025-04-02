@@ -39,6 +39,7 @@ type Storage struct {
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
 		SearchGroup(ctx context.Context, searchQuery string) ([]GroupWithMetadata, error)
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
+		DeleteGroup(ctx context.Context, groupID int) error
 	}
 	GroupJoinRequests interface {
 		JoinRequest(ctx context.Context, groupID int, userID int) error

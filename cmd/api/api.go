@@ -90,6 +90,7 @@ func (app *application) mount() http.Handler {
 				r.Post("/invite", app.InviteUserToGroup)
 				r.Get("/members", app.GetGroupMembers)
 				r.Get("/is-admin", app.IsAdmin)
+				r.Delete("/", app.DeleteGroup)
 				r.Route("/requests", func(r chi.Router) {
 					r.Get("/", app.GetJoinRequests)
 					r.Post("/approve", app.ApproveJoinRequest)
