@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 )
 
 type UserStore struct {
@@ -15,26 +16,30 @@ type UserData struct {
 	FirstName    string
 	LastName     string
 	Email        string
+	University   string
 	PasswordHash string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type User struct {
-	ID        int
-	FirstName string
-	LastName  string
-	Email     string
+	ID         int    `json:"id"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Email      string `json:"email"`
+	University string `json:"university"`
 }
 
 func (s *UserStore) GetUserByID(ctx context.Context, id int) (User, error) {
 
 	query := `
-	SELECT id, first_name, last_name, email
+	SELECT id, first_name, last_name, email, university
 	FROM users
 	WHERE id = $1
 	`
 
 	var fetchedUser User
-	err := s.db.QueryRowContext(ctx, query, id).Scan(&fetchedUser.ID, &fetchedUser.FirstName, &fetchedUser.LastName, &fetchedUser.Email)
+	err := s.db.QueryRowContext(ctx, query, id).Scan(&fetchedUser.ID, &fetchedUser.FirstName, &fetchedUser.LastName, &fetchedUser.Email, &fetchedUser.University)
 
 	if err != nil {
 		switch {
@@ -51,13 +56,13 @@ func (s *UserStore) GetUserByID(ctx context.Context, id int) (User, error) {
 func (s *UserStore) GetUserByEmail(ctx context.Context, email string) (UserData, error) {
 
 	query := `
-	SELECT id, first_name, last_name, email, password_hash
+	SELECT id, first_name, last_name, email, university, password_hash
 	FROM users
 	WHERE email = $1
 	`
 
 	var fecthedUser UserData
-	err := s.db.QueryRowContext(ctx, query, email).Scan(&fecthedUser.ID, &fecthedUser.FirstName, &fecthedUser.LastName, &fecthedUser.Email, &fecthedUser.PasswordHash)
+	err := s.db.QueryRowContext(ctx, query, email).Scan(&fecthedUser.ID, &fecthedUser.FirstName, &fecthedUser.LastName, &fecthedUser.Email, &fecthedUser.University, &fecthedUser.PasswordHash)
 
 	if err != nil {
 		switch {

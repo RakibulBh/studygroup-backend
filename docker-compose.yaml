@@ -1,9 +1,9 @@
 services:
   db:
     image: postgres:16.3
-    container_name: shaheed-db
+    container_name: studygroup-db
     environment:
-      POSTGRES_DB: shaheed
+      POSTGRES_DB: studygroup
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpassword
     volumes:

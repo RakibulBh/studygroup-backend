@@ -22,15 +22,9 @@ type dbConfig struct {
 	maxIdleTime  string
 }
 
-type llmConfig struct {
-	model  string
-	apiKey string
-}
-
 type config struct {
 	addr   string
 	db     dbConfig
-	llm    llmConfig
 	auth   auth
 	env    string
 	apiURL string
@@ -73,6 +67,48 @@ func (app *application) mount() http.Handler {
 			r.Post("/login", app.Login)
 			// r.Post("/logout", app.Logout)
 			r.Get("/refresh", app.Refresh)
+		})
+
+		r.Route("/user", func(r chi.Router) {
+			r.Use(app.Authenticate)
+			r.Get("/", app.GetUser)
+		})
+
+		r.Route("/groups", func(r chi.Router) {
+			r.Use(app.Authenticate)
+			r.Get("/all", app.GetAllGroups)
+			r.Get("/", app.GetUserGroups)
+			r.Get("/joined", app.GetJoinedGroups)
+			r.Post("/", app.CreateGroup)
+			r.Get("/search/{search_query}", app.SearchGroup)
+
+			// Group routes /groups/id
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", app.GetGroup)
+				r.Post("/join", app.JoinGroup)
+				r.Post("/leave", app.LeaveGroup)
+				r.Post("/invite", app.InviteUserToGroup)
+				r.Get("/members", app.GetGroupMembers)
+				r.Get("/is-admin", app.IsAdmin)
+				r.Delete("/", app.DeleteGroup)
+				r.Route("/requests", func(r chi.Router) {
+					r.Get("/", app.GetJoinRequests)
+					r.Post("/approve", app.ApproveJoinRequest)
+				})
+			})
+
+			r.Route("/invitations", func(r chi.Router) {
+				r.Get("/", app.GetUserInvitations)
+				r.Post("/resolve", app.ResolveInvitation)
+			})
+
+		})
+
+		r.Route("/sessions", func(r chi.Router) {
+			r.Use(app.Authenticate)
+			r.Post("/{groupID}", app.CreateStudySession)
+			r.Get("/{groupID}", app.GetGroupStudySessions)
+			r.Get("/user", app.GetUserStudySessions)
 		})
 	})
 

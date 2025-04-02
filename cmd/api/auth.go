@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/RakibulBh/studygroup-backend/internal/constants"
 	"github.com/RakibulBh/studygroup-backend/internal/store"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -16,6 +18,7 @@ type RegisterRequest struct {
 	FirstName       string `json:"first_name"`
 	LastName        string `json:"last_name"`
 	Email           string `json:"email"`
+	University      string `json:"university"`
 	Password        string `json:"password"`
 	PasswordConfirm string `json:"password_confirm"`
 }
@@ -50,13 +53,19 @@ func (app *application) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify University exists
+	if !slices.Contains(constants.Universities, payload.University) {
+		app.badRequestResponse(w, r, errors.New("invalid university"))
+		return
+	}
+
 	// validate password matches
 	if payload.Password != payload.PasswordConfirm {
 		app.badRequestResponse(w, r, errors.New("password does not match"))
 		return
 	}
 
-	// Hash the passowrd
+	// Hash the passoword
 	hash, err := app.store.Auth.HashPassword(payload.Password)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
@@ -64,7 +73,7 @@ func (app *application) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// store the user in the database
-	err = app.store.Auth.Register(ctx, store.RegisterRequest{FirstName: payload.FirstName, LastName: payload.LastName, Email: payload.Email, PasswordHash: hash})
+	err = app.store.Auth.Register(ctx, store.RegisterRequest{FirstName: payload.FirstName, LastName: payload.LastName, Email: payload.Email, University: payload.University, PasswordHash: hash})
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
 		return
@@ -161,19 +170,19 @@ func (app *application) Refresh(w http.ResponseWriter, r *http.Request) {
 	// Validate if the token is valid
 	jwtToken, err := app.store.Auth.VerifyToken(refreshToken, app.config.auth.jwtSecret)
 	if err != nil {
-		app.unauthorizedResponse(w, r, errors.New("invalid token"))
+		app.badRequestResponse(w, r, errors.New("invalid token"))
 		return
 	}
 
 	claims, ok := jwtToken.Claims.(jwt.MapClaims)
 	if !ok {
-		app.unauthorizedResponse(w, r, errors.New("invalid token"))
+		app.badRequestResponse(w, r, errors.New("invalid token"))
 		return
 	}
 
 	userID, err := strconv.ParseInt(fmt.Sprintf("%v", claims["user_id"]), 10, 64)
 	if err != nil {
-		app.unauthorizedResponse(w, r, errors.New("invalid token"))
+		app.badRequestResponse(w, r, errors.New("invalid token"))
 		return
 	}
 
@@ -193,4 +202,9 @@ func (app *application) Refresh(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
 	}
+}
+
+func (app *application) GetUser(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(userCtx).(store.User)
+	app.writeJSON(w, http.StatusOK, "user fetched successfully", user)
 }
