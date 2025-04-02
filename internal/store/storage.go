@@ -32,23 +32,34 @@ type Storage struct {
 		GetUserByID(ctx context.Context, id int) (User, error)
 		GetUserByEmail(ctx context.Context, email string) (UserData, error)
 	}
-	Group interface {
-		GetAllGroups(ctx context.Context, userID int) ([]Group, error)
+	GroupRepository interface {
+		GetAllGroups(ctx context.Context) ([]Group, error)
 		CreateGroup(ctx context.Context, group *Group) (int, error)
 		GetGroupByID(ctx context.Context, id int) (Group, error)
-		MakeAdmin(ctx context.Context, groupID int, userID int) error
-		GetGroupMembers(ctx context.Context, groupID int) ([]User, error)
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
-		SearchGroup(ctx context.Context, searchQuery string, userID int) ([]GroupWithMetadata, error)
-		LeaveGroup(ctx context.Context, groupID int, userID int) error
+		SearchGroup(ctx context.Context, searchQuery string) ([]GroupWithMetadata, error)
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
+	}
+	GroupJoinRequests interface {
 		JoinRequest(ctx context.Context, groupID int, userID int) error
-		GetJoinRequests(ctx context.Context, groupID int) ([]JoinRequest, error)
+		GetJoinRequests(ctx context.Context, groupID int) ([]GroupJoinRequest, error)
+		IsJoinRequested(ctx context.Context, groupID int, userID int) (bool, error)
 		ApproveJoinRequest(ctx context.Context, groupID int, userID int) error
 		RejectJoinRequest(ctx context.Context, groupID int, userID int) error
+	}
+	GroupInvitations interface {
+		InviteUserToGroup(ctx context.Context, groupID int, userID int) error
+		AcceptInvitation(ctx context.Context, userID int, groupID int) error
+		GetInvitations(ctx context.Context, userID int) ([]GroupInvitation, error)
+	}
+	GroupMembership interface {
 		IsMember(ctx context.Context, groupID int, userID int) (bool, error)
 		IsAdmin(ctx context.Context, groupID int, userID int) (bool, error)
-		IsJoinRequested(ctx context.Context, groupID int, userID int) (bool, error)
+		GetGroupMembers(ctx context.Context, groupID int) ([]User, error)
+	}
+	GroupMembershipManagement interface {
+		LeaveGroup(ctx context.Context, groupID int, userID int) error
+		MakeAdmin(ctx context.Context, groupID int, userID int) error
 	}
 	Session interface {
 		CreateStudySession(ctx context.Context, session *StudySession) (int, error)
@@ -59,9 +70,13 @@ type Storage struct {
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Auth:    &AuthStore{db: db},
-		User:    &UserStore{db: db},
-		Group:   &GroupStore{db: db},
-		Session: &SessionStore{db: db},
+		Auth:                      &AuthStore{db: db},
+		User:                      &UserStore{db: db},
+		GroupRepository:           &GroupRepository{db: db},
+		GroupJoinRequests:         &GroupJoinRequestsStore{db: db},
+		GroupInvitations:          &GroupInvitationsStore{db: db},
+		GroupMembership:           &GroupMembershipStore{db: db},
+		GroupMembershipManagement: &GroupMembershipManagementStore{db: db},
+		Session:                   &SessionStore{db: db},
 	}
 }

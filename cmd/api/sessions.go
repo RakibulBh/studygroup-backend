@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -22,6 +23,9 @@ type StudySession struct {
 }
 
 func (app *application) GetGroupStudySessions(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Getting")
+
+	// Get group ID from URL param
 	groupID := chi.URLParam(r, "groupID")
 
 	groupIDInt, err := strconv.Atoi(groupID)
@@ -71,13 +75,13 @@ func (app *application) CreateStudySession(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 
 	// Check if user is admin
-	isAdmin, err := app.store.Group.IsAdmin(ctx, groupIDInt, user.ID)
+	isAdmin, err := app.store.GroupMembership.IsAdmin(ctx, groupIDInt, user.ID)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
 		return
 	}
 	if !isAdmin {
-		app.unauthorizedResponse(w, r, errors.New("user is not admin"))
+		app.badRequestResponse(w, r, errors.New("user is not admin"))
 		return
 	}
 

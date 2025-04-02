@@ -170,19 +170,19 @@ func (app *application) Refresh(w http.ResponseWriter, r *http.Request) {
 	// Validate if the token is valid
 	jwtToken, err := app.store.Auth.VerifyToken(refreshToken, app.config.auth.jwtSecret)
 	if err != nil {
-		app.unauthorizedResponse(w, r, errors.New("invalid token"))
+		app.badRequestResponse(w, r, errors.New("invalid token"))
 		return
 	}
 
 	claims, ok := jwtToken.Claims.(jwt.MapClaims)
 	if !ok {
-		app.unauthorizedResponse(w, r, errors.New("invalid token"))
+		app.badRequestResponse(w, r, errors.New("invalid token"))
 		return
 	}
 
 	userID, err := strconv.ParseInt(fmt.Sprintf("%v", claims["user_id"]), 10, 64)
 	if err != nil {
-		app.unauthorizedResponse(w, r, errors.New("invalid token"))
+		app.badRequestResponse(w, r, errors.New("invalid token"))
 		return
 	}
 

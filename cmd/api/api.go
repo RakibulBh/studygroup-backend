@@ -72,6 +72,7 @@ func (app *application) mount() http.Handler {
 		r.Route("/user", func(r chi.Router) {
 			r.Use(app.Authenticate)
 			r.Get("/", app.GetUser)
+			r.Get("/invitations", app.GetUserInvitations)
 		})
 
 		r.Route("/groups", func(r chi.Router) {
@@ -81,14 +82,14 @@ func (app *application) mount() http.Handler {
 			r.Get("/joined", app.GetJoinedGroups)
 			r.Post("/", app.CreateGroup)
 			r.Get("/search/{search_query}", app.SearchGroup)
-			r.Put("/{id}", app.UpdateGroup)
 
 			// Group routes /groups/id
 			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", app.GetGroup)
 				r.Post("/join", app.JoinGroup)
 				r.Post("/leave", app.LeaveGroup)
+				r.Post("/invite", app.InviteUserToGroup)
 				r.Get("/members", app.GetGroupMembers)
-				r.Get("/", app.GetGroup)
 				r.Get("/is-admin", app.IsAdmin)
 				r.Route("/requests", func(r chi.Router) {
 					r.Get("/", app.GetJoinRequests)

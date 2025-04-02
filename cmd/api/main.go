@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-
 	cfg := config{
 		env:    env.GetString("ENV", "development"),
 		addr:   ":" + env.GetString("PORT", "8080"),
