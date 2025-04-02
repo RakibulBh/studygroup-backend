@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type GroupRepository struct {
@@ -11,23 +12,16 @@ type GroupRepository struct {
 }
 
 type Group struct {
-	ID             int    `json:"id"`
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	HasMemberLimit bool   `json:"has_member_limit"`
-	MemberLimit    int    `json:"member_limit"`
-	Subject        string `json:"subject"`
-	Visibility     string `json:"visibility"`
-	Location       string `json:"location"`
-}
-
-type GroupWithMetadata struct {
-	Group
-	Metadata GroupMetadata `json:"metadata"`
-}
-
-type GroupMetadata struct {
-	JoinRequested bool `json:"join_requested"`
+	ID             int       `json:"id"`
+	Name           string    `json:"name"`
+	HasMemberLimit bool      `json:"has_member_limit"`
+	MemberLimit    int       `json:"member_limit"`
+	Subject        string    `json:"subject"`
+	Description    string    `json:"description"`
+	Location       string    `json:"location"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Visibility     string    `json:"visibility"`
 }
 
 func (s *GroupRepository) CreateGroup(ctx context.Context, group *Group) (int, error) {
@@ -86,7 +80,7 @@ func (s *GroupRepository) GetGroupByID(ctx context.Context, id int) (Group, erro
 
 func (s *GroupRepository) GetUserGroups(ctx context.Context, userID int) ([]Group, error) {
 	query := `
-		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location, g.visibility
+		SELECT g.id, g.name, g.description, g.has_member_limit, g.member_limit, g.subject, g.location, g.visibility, g.created_at
 		FROM groups g
 		JOIN membership m ON g.id = m.group_id
 		WHERE m.user_id = $1 AND m.role = 'admin'
@@ -101,7 +95,7 @@ func (s *GroupRepository) GetUserGroups(ctx context.Context, userID int) ([]Grou
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility, &group.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -118,38 +112,20 @@ func (s *GroupRepository) GetUserGroups(ctx context.Context, userID int) ([]Grou
 	return groups, nil
 }
 
-func (s *GroupRepository) SearchGroup(ctx context.Context, searchQuery string) ([]GroupWithMetadata, error) {
+func (s *GroupRepository) SearchGroup(ctx context.Context, searchQuery string) ([]Group, error) {
 	query := `
-       SELECT
-			g.id,
-			g.name,
-			g.description,
-			g.has_member_limit,
-			g.member_limit,
-			g.subject,
-			g.location,
-			g.visibility
-		FROM
-			groups g
-		LEFT JOIN membership m ON g.id = m.group_id AND m.user_id = $1
-		WHERE
-			g.name ILIKE '%' || $2 || '%'
-			AND g.visibility = 'public'
-			AND m.user_id IS NULL
-		ORDER BY
-			g.name ASC
-    `
+       SELECT * FROM groups WHERE name ILIKE $1 || '%' AND visibility = 'public' ORDER BY name ASC`
 
 	rows, err := s.db.QueryContext(ctx, query, searchQuery)
 	if err != nil {
 		return nil, err
 	}
 
-	var groups []GroupWithMetadata
+	var groups []Group
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
+		err := rows.Scan(&group.ID, &group.Name, &group.HasMemberLimit, &memberLimit, &group.Description, &group.Subject, &group.Location, &group.CreatedAt, &group.UpdatedAt, &group.Visibility)
 		if err != nil {
 			return nil, err
 		}
@@ -160,13 +136,7 @@ func (s *GroupRepository) SearchGroup(ctx context.Context, searchQuery string) (
 			group.MemberLimit = 0
 		}
 
-		// We'll set JoinRequested to false for now since we're missing the userID
-		groups = append(groups, GroupWithMetadata{
-			Group: group,
-			Metadata: GroupMetadata{
-				JoinRequested: false,
-			},
-		})
+		groups = append(groups, group)
 	}
 
 	return groups, nil

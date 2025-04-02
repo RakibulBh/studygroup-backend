@@ -37,7 +37,7 @@ type Storage struct {
 		CreateGroup(ctx context.Context, group *Group) (int, error)
 		GetGroupByID(ctx context.Context, id int) (Group, error)
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
-		SearchGroup(ctx context.Context, searchQuery string) ([]GroupWithMetadata, error)
+		SearchGroup(ctx context.Context, searchQuery string) ([]Group, error)
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
 		DeleteGroup(ctx context.Context, groupID int) error
 	}
@@ -57,6 +57,7 @@ type Storage struct {
 	GroupMembership interface {
 		IsMember(ctx context.Context, groupID int, userID int) (bool, error)
 		IsAdmin(ctx context.Context, groupID int, userID int) (bool, error)
+		GetMemberCount(ctx context.Context, groupID int) (int, error)
 		GetGroupMembers(ctx context.Context, groupID int) ([]User, error)
 	}
 	GroupMembershipManagement interface {

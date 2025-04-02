@@ -36,6 +36,22 @@ func (s *GroupMembershipStore) GetGroupMembers(ctx context.Context, groupID int)
 	return members, nil
 }
 
+func (s *GroupMembershipStore) GetMemberCount(ctx context.Context, groupID int) (int, error) {
+	query := `
+		SELECT COUNT(*) FROM membership WHERE group_id = $1
+		`
+
+	row := s.db.QueryRowContext(ctx, query, groupID)
+
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func (s *GroupMembershipStore) IsAdmin(ctx context.Context, groupID int, userID int) (bool, error) {
 	query := `
 		SELECT EXISTS(SELECT 1 FROM membership WHERE group_id = $1 AND user_id = $2 AND role = 'admin')

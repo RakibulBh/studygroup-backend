@@ -108,11 +108,18 @@ func (app *application) GetUserGroups(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Groups fetched successfully", groups)
 }
 
+type GroupWithMetadata struct {
+	store.Group
+	JoinRequested bool `json:"join_requested"`
+	MemberCount   int  `json:"member_count"`
+}
+
 func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
 	// Get search query from path
 	searchQuery := chi.URLParam(r, "search_query")
 
 	ctx := r.Context()
+	user := r.Context().Value(userCtx).(store.User)
 
 	// Search for group
 	groups, err := app.store.GroupRepository.SearchGroup(ctx, searchQuery)
@@ -121,7 +128,37 @@ func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.writeJSON(w, http.StatusOK, "Group searched successfully", groups)
+	var groupsWithMetadata []GroupWithMetadata
+
+	// Check if user is a member of any of the group and if they have requested
+	for _, group := range groups {
+		isMember, err := app.store.GroupMembership.IsMember(ctx, group.ID, user.ID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
+
+		// If user is not a member, check if they have requested to join
+		if !isMember {
+			hasJoinRequested, err := app.store.GroupJoinRequests.IsJoinRequested(ctx, group.ID, user.ID)
+			if err != nil {
+				app.internalServerErrorResponse(w, r, err)
+				return
+			}
+			memberCount, err := app.store.GroupMembership.GetMemberCount(ctx, group.ID)
+			if err != nil {
+				app.internalServerErrorResponse(w, r, err)
+				return
+			}
+			groupsWithMetadata = append(groupsWithMetadata, GroupWithMetadata{
+				Group:         group,
+				JoinRequested: hasJoinRequested,
+				MemberCount:   memberCount,
+			})
+		}
+	}
+
+	app.writeJSON(w, http.StatusOK, "Group searched successfully", groupsWithMetadata)
 }
 
 // Get a group by id
