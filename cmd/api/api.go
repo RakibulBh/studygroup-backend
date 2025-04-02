@@ -72,7 +72,6 @@ func (app *application) mount() http.Handler {
 		r.Route("/user", func(r chi.Router) {
 			r.Use(app.Authenticate)
 			r.Get("/", app.GetUser)
-			r.Get("/invitations", app.GetUserInvitations)
 		})
 
 		r.Route("/groups", func(r chi.Router) {
@@ -95,6 +94,11 @@ func (app *application) mount() http.Handler {
 					r.Get("/", app.GetJoinRequests)
 					r.Post("/approve", app.ApproveJoinRequest)
 				})
+			})
+
+			r.Route("/invitations", func(r chi.Router) {
+				r.Get("/", app.GetUserInvitations)
+				r.Post("/resolve", app.ResolveInvitation)
 			})
 
 		})

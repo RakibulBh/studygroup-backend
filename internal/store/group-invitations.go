@@ -8,10 +8,10 @@ import (
 )
 
 type GroupInvitation struct {
-	ID        int       `json:"id"`
-	UserID    int       `json:"user_id"`
 	GroupID   int       `json:"group_id"`
+	UserID    int       `json:"user_id"`
 	ExpiresAt time.Time `json:"expires_at"`
+	InvitedAt time.Time `json:"invited_at"`
 }
 
 type GroupInvitationsStore struct {
@@ -45,7 +45,7 @@ func (s *GroupInvitationsStore) InviteUserToGroup(ctx context.Context, groupID i
 func (s *GroupInvitationsStore) AcceptInvitation(ctx context.Context, userID int, groupID int) error {
 	// Check if invitation is expired
 	query := `
-		SELECT EXISTS(SELECT 1 FROM group_invitations WHERE user_id = $1 AND group_id = $2 AND expiry > NOW())
+		SELECT EXISTS(SELECT 1 FROM group_invitations WHERE user_id = $1 AND group_id = $2 AND expires_at > NOW())
 	`
 
 	row := s.db.QueryRowContext(ctx, query, userID, groupID)
@@ -82,9 +82,21 @@ func (s *GroupInvitationsStore) AcceptInvitation(ctx context.Context, userID int
 	return nil
 }
 
+func (s *GroupInvitationsStore) RejectInvitation(ctx context.Context, userID int, groupID int) error {
+	query := `
+		DELETE FROM group_invitations WHERE user_id = $1 AND group_id = $2
+	`
+	_, err := s.db.ExecContext(ctx, query, userID, groupID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *GroupInvitationsStore) GetInvitations(ctx context.Context, userID int) ([]GroupInvitation, error) {
 	query := `
-		SELECT * FROM group_invitations WHERE user_id = $1
+		SELECT * FROM group_invitations WHERE user_id = $1 AND expires_at > NOW()
 	`
 
 	rows, err := s.db.QueryContext(ctx, query, userID)
@@ -95,7 +107,7 @@ func (s *GroupInvitationsStore) GetInvitations(ctx context.Context, userID int) 
 	var invitations []GroupInvitation
 	for rows.Next() {
 		var invitation GroupInvitation
-		err := rows.Scan(&invitation.ID, &invitation.UserID, &invitation.GroupID, &invitation.ExpiresAt)
+		err := rows.Scan(&invitation.GroupID, &invitation.UserID, &invitation.InvitedAt, &invitation.ExpiresAt)
 		if err != nil {
 			return nil, err
 		}

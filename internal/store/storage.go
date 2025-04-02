@@ -51,6 +51,7 @@ type Storage struct {
 		InviteUserToGroup(ctx context.Context, groupID int, userID int) error
 		AcceptInvitation(ctx context.Context, userID int, groupID int) error
 		GetInvitations(ctx context.Context, userID int) ([]GroupInvitation, error)
+		RejectInvitation(ctx context.Context, userID int, groupID int) error
 	}
 	GroupMembership interface {
 		IsMember(ctx context.Context, groupID int, userID int) (bool, error)

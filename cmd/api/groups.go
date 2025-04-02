@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/RakibulBh/studygroup-backend/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -439,6 +440,13 @@ func (app *application) InviteUserToGroup(w http.ResponseWriter, r *http.Request
 	app.writeJSON(w, http.StatusOK, "User invited successfully", nil)
 }
 
+type UserInvitationsResponse struct {
+	GroupID   int       `json:"group_id"`
+	GroupName string    `json:"group_name"`
+	InvitedAt time.Time `json:"invited_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
 // get user invitations
 func (app *application) GetUserInvitations(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userCtx).(store.User)
@@ -451,7 +459,23 @@ func (app *application) GetUserInvitations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	app.writeJSON(w, http.StatusOK, "User invitations fetched successfully", invitations)
+	// Find group name with ID
+	var userInvitations []UserInvitationsResponse
+	for _, invitation := range invitations {
+		group, err := app.store.GroupRepository.GetGroupByID(ctx, invitation.GroupID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
+		userInvitations = append(userInvitations, UserInvitationsResponse{
+			GroupID:   invitation.GroupID,
+			GroupName: group.Name,
+			InvitedAt: invitation.InvitedAt,
+			ExpiresAt: invitation.ExpiresAt,
+		})
+	}
+
+	app.writeJSON(w, http.StatusOK, "User invitations fetched successfully", userInvitations)
 }
 
 // accept invitation
@@ -474,4 +498,50 @@ func (app *application) AcceptInvitation(w http.ResponseWriter, r *http.Request)
 	}
 
 	app.writeJSON(w, http.StatusOK, "Invitation accepted successfully", nil)
+}
+
+// resolve invitation
+type ResolveInvitationRequest struct {
+	GroupID int  `json:"group_id"`
+	Accept  bool `json:"accept"`
+}
+
+func (app *application) ResolveInvitation(w http.ResponseWriter, r *http.Request) {
+	var payload ResolveInvitationRequest
+	err := app.readJSON(r, &payload)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+	user := r.Context().Value(userCtx).(store.User)
+
+	// Check if user is already a member
+	isMember, err := app.store.GroupMembership.IsMember(ctx, payload.GroupID, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if isMember {
+		app.badRequestResponse(w, r, errors.New("user is already a member"))
+		return
+	}
+
+	if payload.Accept {
+		err = app.store.GroupInvitations.AcceptInvitation(ctx, user.ID, payload.GroupID)
+	} else {
+		err = app.store.GroupInvitations.RejectInvitation(ctx, user.ID, payload.GroupID)
+	}
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	action := "accepted"
+	if !payload.Accept {
+		action = "rejected"
+	}
+
+	app.writeJSON(w, http.StatusOK, fmt.Sprintf("Invitation %s successfully", action), nil)
 }
