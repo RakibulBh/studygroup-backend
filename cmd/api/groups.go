@@ -615,3 +615,47 @@ func (app *application) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusOK, "Group deleted successfully", nil)
 }
+
+// kick user from group
+type KickUserFromGroupRequest struct {
+	UserID int `json:"user_id"`
+}
+
+func (app *application) KickUserFromGroup(w http.ResponseWriter, r *http.Request) {
+	var payload KickUserFromGroupRequest
+	err := app.readJSON(r, &payload)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	groupID := chi.URLParam(r, "id")
+
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+	user := r.Context().Value(userCtx).(store.User)
+
+	// Check if user is admin
+	isAdmin, err := app.store.GroupMembership.IsAdmin(ctx, groupIDInt, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if !isAdmin {
+		app.writeJSON(w, http.StatusForbidden, "not allowed", nil)
+		return
+	}
+
+	err = app.store.GroupMembershipManagement.KickUserFromGroup(ctx, groupIDInt, payload.UserID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "User kicked from group successfully", nil)
+}

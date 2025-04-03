@@ -36,3 +36,16 @@ func (s *GroupMembershipManagementStore) LeaveGroup(ctx context.Context, groupID
 
 	return nil
 }
+
+func (s *GroupMembershipManagementStore) KickUserFromGroup(ctx context.Context, groupID int, userID int) error {
+	query := `
+		DELETE FROM membership WHERE user_id = $1 AND group_id = $2
+	`
+
+	_, err := s.db.ExecContext(ctx, query, userID, groupID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

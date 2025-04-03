@@ -63,6 +63,7 @@ type Storage struct {
 	GroupMembershipManagement interface {
 		LeaveGroup(ctx context.Context, groupID int, userID int) error
 		MakeAdmin(ctx context.Context, groupID int, userID int) error
+		KickUserFromGroup(ctx context.Context, groupID int, userID int) error
 	}
 	Session interface {
 		CreateStudySession(ctx context.Context, session *StudySession) (int, error)
