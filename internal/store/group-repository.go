@@ -55,7 +55,7 @@ func (s *GroupRepository) CreateGroup(ctx context.Context, group *Group) (int, e
 
 func (s *GroupRepository) GetGroupByID(ctx context.Context, id int) (Group, error) {
 	query := `
-		SELECT id, name, description, has_member_limit, member_limit, subject, location, visibility
+		SELECT id, name, description, has_member_limit, member_limit, subject, location, visibility, created_at, updated_at
 		FROM groups
 		WHERE id = $1
 	`
@@ -64,7 +64,7 @@ func (s *GroupRepository) GetGroupByID(ctx context.Context, id int) (Group, erro
 
 	var group Group
 	var memberLimit sql.NullInt64
-	err := row.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility)
+	err := row.Scan(&group.ID, &group.Name, &group.Description, &group.HasMemberLimit, &memberLimit, &group.Subject, &group.Location, &group.Visibility, &group.CreatedAt, &group.UpdatedAt)
 	if err != nil {
 		return Group{}, err
 	}

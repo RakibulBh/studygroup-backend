@@ -182,9 +182,6 @@ func (app *application) GetGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user id from context
-	fmt.Println("Group: ", group)
-
 	app.writeJSON(w, http.StatusOK, "Group fetched successfully", group)
 }
 
