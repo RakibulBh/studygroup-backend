@@ -93,7 +93,7 @@ func (app *application) mount() http.Handler {
 				r.Post("/kick", app.KickUserFromGroup)
 				r.Delete("/", app.DeleteGroup)
 				r.Route("/requests", func(r chi.Router) {
-					r.Get("/", app.GetJoinRequests)
+					r.Get("/", app.GetGroupJoinRequests)
 					r.Post("/approve", app.ApproveJoinRequest)
 				})
 			})

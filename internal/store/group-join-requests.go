@@ -32,7 +32,7 @@ func (s *GroupJoinRequestsStore) JoinRequest(ctx context.Context, groupID int, u
 
 func (s *GroupJoinRequestsStore) GetJoinRequests(ctx context.Context, groupID int) ([]GroupJoinRequest, error) {
 	query := `
-		SELECT * FROM join_requests WHERE group_id = $1
+		SELECT user_id, group_id, status FROM join_requests WHERE group_id = $1
 	`
 
 	rows, err := s.db.QueryContext(ctx, query, groupID)
@@ -43,7 +43,7 @@ func (s *GroupJoinRequestsStore) GetJoinRequests(ctx context.Context, groupID in
 	var joinRequests []GroupJoinRequest
 	for rows.Next() {
 		var joinRequest GroupJoinRequest
-		err := rows.Scan(&joinRequest.ID, &joinRequest.UserID, &joinRequest.GroupID, &joinRequest.Status)
+		err := rows.Scan(&joinRequest.UserID, &joinRequest.GroupID, &joinRequest.Status)
 		if err != nil {
 			return nil, err
 		}

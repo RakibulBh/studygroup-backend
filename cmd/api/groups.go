@@ -264,7 +264,16 @@ func (app *application) JoinGroup(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Group join request sent successfully", nil)
 }
 
-func (app *application) GetJoinRequests(w http.ResponseWriter, r *http.Request) {
+type GroupJoinRequest struct {
+	store.GroupJoinRequest
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Email      string `json:"email"`
+	University string `json:"university"`
+	Subject    string `json:"subject"`
+}
+
+func (app *application) GetGroupJoinRequests(w http.ResponseWriter, r *http.Request) {
 	groupID := chi.URLParam(r, "id")
 
 	ctx := r.Context()
@@ -275,8 +284,9 @@ func (app *application) GetJoinRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Check if the user is the admin of the group
 	user := r.Context().Value(userCtx).(store.User)
+
+	// Check if the user is the admin of the group
 	isAdmin, err := app.store.GroupMembership.IsAdmin(ctx, groupIDInt, user.ID)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
@@ -292,7 +302,25 @@ func (app *application) GetJoinRequests(w http.ResponseWriter, r *http.Request) 
 		app.internalServerErrorResponse(w, r, err)
 		return
 	}
-	app.writeJSON(w, http.StatusOK, "Join requests fetched successfully", joinRequests)
+
+	var groupJoinRequests []GroupJoinRequest
+	for _, joinRequest := range joinRequests {
+		user, err := app.store.User.GetUserByID(ctx, joinRequest.UserID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
+		groupJoinRequests = append(groupJoinRequests, GroupJoinRequest{
+			GroupJoinRequest: joinRequest,
+			FirstName:        user.FirstName,
+			LastName:         user.LastName,
+			Email:            user.Email,
+			University:       user.University,
+			Subject:          user.Subject,
+		})
+	}
+
+	app.writeJSON(w, http.StatusOK, "Join requests fetched successfully", groupJoinRequests)
 }
 
 // Approve join request
