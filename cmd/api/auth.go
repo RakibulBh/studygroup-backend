@@ -211,6 +211,16 @@ func (app *application) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *application) Logout(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(userCtx).(store.User)
+	err := app.store.Auth.DeleteRefreshToken(r.Context(), user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	app.writeJSON(w, http.StatusOK, "logged out successfully", nil)
+}
+
 func (app *application) GetUser(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userCtx).(store.User)
 	app.writeJSON(w, http.StatusOK, "user fetched successfully", user)

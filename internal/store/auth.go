@@ -139,3 +139,16 @@ func (s *AuthStore) RefreshToken(ctx context.Context, userID int, tokenString st
 
 	return tokenString, refreshToken, nil
 }
+
+func (s *AuthStore) DeleteRefreshToken(ctx context.Context, userID int) error {
+	query := `
+		DELETE FROM refresh_tokens
+		WHERE user_id = $1
+	`
+	_, err := s.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
