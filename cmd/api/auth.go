@@ -21,6 +21,7 @@ type RegisterRequest struct {
 	University      string `json:"university"`
 	Password        string `json:"password"`
 	PasswordConfirm string `json:"password_confirm"`
+	Subject         string `json:"subject"`
 }
 
 func (app *application) Register(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +66,13 @@ func (app *application) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hash the passoword
+	// Validate subject exists
+	if !slices.Contains(constants.Subjects, payload.Subject) {
+		app.badRequestResponse(w, r, errors.New("invalid subject"))
+		return
+	}
+
+	// Hash the password
 	hash, err := app.store.Auth.HashPassword(payload.Password)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
@@ -73,7 +80,7 @@ func (app *application) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// store the user in the database
-	err = app.store.Auth.Register(ctx, store.RegisterRequest{FirstName: payload.FirstName, LastName: payload.LastName, Email: payload.Email, University: payload.University, PasswordHash: hash})
+	err = app.store.Auth.Register(ctx, store.RegisterRequest{FirstName: payload.FirstName, LastName: payload.LastName, Email: payload.Email, University: payload.University, PasswordHash: hash, Subject: payload.Subject})
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
 		return

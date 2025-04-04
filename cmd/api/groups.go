@@ -668,6 +668,12 @@ func (app *application) KickUserFromGroup(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	user := r.Context().Value(userCtx).(store.User)
 
+	// You can't kick yourself out
+	if payload.UserID == user.ID {
+		app.badRequestResponse(w, r, errors.New("you can't kick yourself out"))
+		return
+	}
+
 	// Check if user is admin
 	isAdmin, err := app.store.GroupMembership.IsAdmin(ctx, groupIDInt, user.ID)
 	if err != nil {
