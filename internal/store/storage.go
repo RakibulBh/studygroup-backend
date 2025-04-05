@@ -34,12 +34,12 @@ type Storage struct {
 		GetUserByEmail(ctx context.Context, email string) (UserData, error)
 	}
 	GroupRepository interface {
-		GetAllGroups(ctx context.Context) ([]Group, error)
 		CreateGroup(ctx context.Context, group *Group) (int, error)
 		GetGroupByID(ctx context.Context, id int) (Group, error)
 		GetUserGroups(ctx context.Context, userID int) ([]Group, error)
 		SearchGroup(ctx context.Context, searchQuery string) ([]Group, error)
 		GetJoinedGroups(ctx context.Context, userID int) ([]Group, error)
+		GetGroupsWithDistance(ctx context.Context, latitude float64, longitude float64) ([]GroupWithDistance, error)
 		DeleteGroup(ctx context.Context, groupID int) error
 	}
 	GroupJoinRequests interface {

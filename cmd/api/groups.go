@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -11,17 +12,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type CreateGroupRequest struct {
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	HasMemberLimit bool   `json:"has_member_limit"`
-	MemberLimit    int    `json:"member_limit"`
-	Subject        string `json:"subject"`
-	Location       string `json:"location"`
-	Visibility     string `json:"visibility"`
-}
-
 // Create
+type CreateGroupRequest struct {
+	Name           string  `json:"name"`
+	Description    string  `json:"description"`
+	HasMemberLimit bool    `json:"has_member_limit"`
+	MemberLimit    int     `json:"member_limit"`
+	Subject        string  `json:"subject"`
+	Location       string  `json:"location"`
+	Visibility     string  `json:"visibility"`
+	Latitude       float64 `json:"latitude"`
+	Longitude      float64 `json:"longitude"`
+}
 
 func (app *application) CreateGroup(w http.ResponseWriter, r *http.Request) {
 
@@ -55,15 +57,23 @@ func (app *application) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if member limit being true or false
-	var memberLimit int
-	if payload.HasMemberLimit {
-		memberLimit = payload.MemberLimit
-	} else {
-		memberLimit = 0
+	// Handle member limit - set to nil if 0 or HasMemberLimit is false
+	var memberLimit *int
+	if payload.HasMemberLimit && payload.MemberLimit > 0 {
+		memberLimit = new(int)
+		*memberLimit = payload.MemberLimit
 	}
 
 	ctx := r.Context()
+
+	// Check if both latitude and longitude are 0, store as null if so
+	var lat, long *float64
+	if payload.Latitude != 0 || payload.Longitude != 0 {
+		lat = new(float64)
+		long = new(float64)
+		*lat = payload.Latitude
+		*long = payload.Longitude
+	}
 
 	group := &store.Group{
 		Name:           payload.Name,
@@ -71,7 +81,10 @@ func (app *application) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		HasMemberLimit: payload.HasMemberLimit,
 		MemberLimit:    memberLimit,
 		Subject:        payload.Subject,
+		Latitude:       lat,
+		Longitude:      long,
 		Location:       payload.Location,
+		Visibility:     payload.Visibility,
 	}
 
 	// Create group
@@ -127,8 +140,8 @@ func (app *application) GetUserGroups(w http.ResponseWriter, r *http.Request) {
 
 type GroupWithMetadata struct {
 	store.Group
-	JoinRequested bool `json:"join_requested"`
-	MemberCount   int  `json:"member_count"`
+	JoinRequested bool         `json:"join_requested"`
+	Members       []store.User `json:"members"`
 }
 
 func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +175,7 @@ func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
 				app.internalServerErrorResponse(w, r, err)
 				return
 			}
-			memberCount, err := app.store.GroupMembership.GetMemberCount(ctx, group.ID)
+			members, err := app.store.GroupMembership.GetGroupMembers(ctx, group.ID)
 			if err != nil {
 				app.internalServerErrorResponse(w, r, err)
 				return
@@ -170,7 +183,7 @@ func (app *application) SearchGroup(w http.ResponseWriter, r *http.Request) {
 			groupsWithMetadata = append(groupsWithMetadata, GroupWithMetadata{
 				Group:         group,
 				JoinRequested: hasJoinRequested,
-				MemberCount:   memberCount,
+				Members:       members,
 			})
 		}
 	}
@@ -202,30 +215,84 @@ func (app *application) GetGroup(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "Group fetched successfully", group)
 }
 
-func (app *application) GetAllGroups(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+// Get nearby groups
+type NearbyGroupsRequest struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
 
-	groups, err := app.store.GroupRepository.GetAllGroups(ctx)
+type NearbyGroupWithMembers struct {
+	store.GroupWithDistance
+	Members []store.User `json:"members"`
+}
+
+func (app *application) GetNearbyGroups(w http.ResponseWriter, r *http.Request) {
+	// Parse request
+	var payload NearbyGroupsRequest
+	err := app.readJSON(r, &payload)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// Convert latitude and longitude to float64
+	latitudeFloat := payload.Latitude
+	longitudeFloat := payload.Longitude
+
+	ctx := r.Context()
+	user := r.Context().Value(userCtx).(store.User)
+
+	// Get all groups with their distances
+	groups, err := app.store.GroupRepository.GetGroupsWithDistance(ctx, latitudeFloat, longitudeFloat)
 	if err != nil {
 		app.internalServerErrorResponse(w, r, err)
 		return
 	}
 
-	var groupsWithMembers []GroupWithMembers
+	fmt.Println("Groups: ", groups)
 
-	// For each group get the members
+	// sort by distance
+	sort.Slice(groups, func(i, j int) bool {
+		return groups[i].Distance < groups[j].Distance
+	})
+
+	if len(groups) > 5 {
+		groups = groups[:5]
+	}
+
+	var nearbyGroupsWithMembers []NearbyGroupWithMembers
+
+	// For each group add a members too
 	for _, group := range groups {
+		// Check if user is a member of the group, if so then do not show that group
+		isMember, err := app.store.GroupMembership.IsMember(ctx, group.ID, user.ID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
+		if isMember {
+			continue
+		}
+
+		// Get members of the group
 		members, err := app.store.GroupMembership.GetGroupMembers(ctx, group.ID)
 		if err != nil {
 			app.internalServerErrorResponse(w, r, err)
 			return
 		}
-		groupsWithMembers = append(groupsWithMembers, GroupWithMembers{
-			Group:   group,
-			Members: members,
+
+		// Check the distance
+		if group.Distance > 5 {
+			continue
+		}
+
+		nearbyGroupsWithMembers = append(nearbyGroupsWithMembers, NearbyGroupWithMembers{
+			GroupWithDistance: group,
+			Members:           members,
 		})
 	}
-	app.writeJSON(w, http.StatusOK, "All groups fetched successfully", groupsWithMembers)
+
+	app.writeJSON(w, http.StatusOK, "Nearby groups fetched successfully", nearbyGroupsWithMembers)
 }
 
 // Membership

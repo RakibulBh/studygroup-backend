@@ -72,6 +72,12 @@ func (app *application) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make small corrections such as putting things small letter.
+	payload.Email = strings.TrimSpace(payload.Email)
+	payload.Email = strings.ToLower(payload.Email)
+	payload.FirstName = strings.TrimSpace(payload.FirstName)
+	payload.LastName = strings.TrimSpace(payload.LastName)
+
 	// Hash the password
 	hash, err := app.store.Auth.HashPassword(payload.Password)
 	if err != nil {

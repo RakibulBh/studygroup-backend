@@ -80,7 +80,7 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/groups", func(r chi.Router) {
 			r.Use(app.Authenticate)
-			r.Get("/all", app.GetAllGroups)
+			r.Post("/nearby", app.GetNearbyGroups)
 			r.Get("/", app.GetUserGroups)
 			r.Get("/joined", app.GetJoinedGroups)
 			r.Post("/", app.CreateGroup)
