@@ -26,11 +26,13 @@ type RegisterRequest struct {
 func (s *AuthStore) Register(ctx context.Context, request RegisterRequest) error {
 
 	query := `
-		INSERT INTO users (first_name, last_name, email, university, password_hash, subject)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (first_name, last_name, email, university, password_hash, subject, image_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
-	_, err := s.db.ExecContext(ctx, query, request.FirstName, request.LastName, request.Email, request.University, request.PasswordHash, request.Subject)
+	imageUrl := "https://ui-avatars.com/api/?name=" + request.FirstName + "+" + request.LastName
+
+	_, err := s.db.ExecContext(ctx, query, request.FirstName, request.LastName, request.Email, request.University, request.PasswordHash, request.Subject, imageUrl)
 	if err != nil {
 		return err
 	}

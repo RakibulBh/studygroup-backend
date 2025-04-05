@@ -19,6 +19,7 @@ type UserData struct {
 	University   string
 	PasswordHash string
 	Subject      string
+	ImageUrl     string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -30,18 +31,19 @@ type User struct {
 	Email      string `json:"email"`
 	University string `json:"university"`
 	Subject    string `json:"subject"`
+	ImageUrl   string `json:"image_url"`
 }
 
 func (s *UserStore) GetUserByID(ctx context.Context, id int) (User, error) {
 
 	query := `
-	SELECT id, first_name, last_name, email, university, subject
+	SELECT id, first_name, last_name, email, university, subject, image_url
 	FROM users
 	WHERE id = $1
 	`
 
 	var fetchedUser User
-	err := s.db.QueryRowContext(ctx, query, id).Scan(&fetchedUser.ID, &fetchedUser.FirstName, &fetchedUser.LastName, &fetchedUser.Email, &fetchedUser.University, &fetchedUser.Subject)
+	err := s.db.QueryRowContext(ctx, query, id).Scan(&fetchedUser.ID, &fetchedUser.FirstName, &fetchedUser.LastName, &fetchedUser.Email, &fetchedUser.University, &fetchedUser.Subject, &fetchedUser.ImageUrl)
 
 	if err != nil {
 		switch {
@@ -58,13 +60,14 @@ func (s *UserStore) GetUserByID(ctx context.Context, id int) (User, error) {
 func (s *UserStore) GetUserByEmail(ctx context.Context, email string) (UserData, error) {
 
 	query := `
-	SELECT id, first_name, last_name, email, university, password_hash, subject
+	SELECT id, first_name, last_name, email, university, password_hash, subject, image_url	
 	FROM users
 	WHERE email = $1
 	`
 
 	var fecthedUser UserData
-	err := s.db.QueryRowContext(ctx, query, email).Scan(&fecthedUser.ID, &fecthedUser.FirstName, &fecthedUser.LastName, &fecthedUser.Email, &fecthedUser.University, &fecthedUser.PasswordHash, &fecthedUser.Subject)
+
+	err := s.db.QueryRowContext(ctx, query, email).Scan(&fecthedUser.ID, &fecthedUser.FirstName, &fecthedUser.LastName, &fecthedUser.Email, &fecthedUser.University, &fecthedUser.PasswordHash, &fecthedUser.Subject, &fecthedUser.ImageUrl)
 
 	if err != nil {
 		switch {
