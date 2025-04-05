@@ -94,6 +94,10 @@ func (app *application) CreateGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 // query
+type GroupWithMembers struct {
+	store.Group
+	Members []store.User `json:"members"`
+}
 
 func (app *application) GetUserGroups(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userCtx).(store.User)
@@ -103,9 +107,22 @@ func (app *application) GetUserGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Groups: ", groups)
+	var groupWithMembers []GroupWithMembers
 
-	app.writeJSON(w, http.StatusOK, "Groups fetched successfully", groups)
+	// For each group get the members
+	for _, group := range groups {
+		members, err := app.store.GroupMembership.GetGroupMembers(r.Context(), group.ID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
+		groupWithMembers = append(groupWithMembers, GroupWithMembers{
+			Group:   group,
+			Members: members,
+		})
+	}
+
+	app.writeJSON(w, http.StatusOK, "Groups fetched successfully", groupWithMembers)
 }
 
 type GroupWithMetadata struct {
@@ -194,7 +211,21 @@ func (app *application) GetAllGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.writeJSON(w, http.StatusOK, "All groups fetched successfully", groups)
+	var groupsWithMembers []GroupWithMembers
+
+	// For each group get the members
+	for _, group := range groups {
+		members, err := app.store.GroupMembership.GetGroupMembers(ctx, group.ID)
+		if err != nil {
+			app.internalServerErrorResponse(w, r, err)
+			return
+		}
+		groupsWithMembers = append(groupsWithMembers, GroupWithMembers{
+			Group:   group,
+			Members: members,
+		})
+	}
+	app.writeJSON(w, http.StatusOK, "All groups fetched successfully", groupsWithMembers)
 }
 
 // Membership

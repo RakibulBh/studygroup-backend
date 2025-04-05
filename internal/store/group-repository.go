@@ -16,12 +16,12 @@ type Group struct {
 	Name           string    `json:"name"`
 	HasMemberLimit bool      `json:"has_member_limit"`
 	MemberLimit    int       `json:"member_limit"`
-	Subject        string    `json:"subject"`
 	Description    string    `json:"description"`
+	Subject        string    `json:"subject"`
+	Visibility     string    `json:"visibility"`
 	Location       string    `json:"location"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
-	Visibility     string    `json:"visibility"`
 }
 
 func (s *GroupRepository) CreateGroup(ctx context.Context, group *Group) (int, error) {
@@ -114,7 +114,7 @@ func (s *GroupRepository) GetUserGroups(ctx context.Context, userID int) ([]Grou
 
 func (s *GroupRepository) SearchGroup(ctx context.Context, searchQuery string) ([]Group, error) {
 	query := `
-       SELECT * FROM groups WHERE name ILIKE $1 || '%' AND visibility = 'public' ORDER BY name ASC`
+       SELECT id, name, has_member_limit, member_limit, description, subject, location, visibility, created_at, updated_at FROM groups WHERE name ILIKE $1 || '%' AND visibility = 'public' ORDER BY name ASC`
 
 	rows, err := s.db.QueryContext(ctx, query, searchQuery)
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *GroupRepository) SearchGroup(ctx context.Context, searchQuery string) (
 	for rows.Next() {
 		var group Group
 		var memberLimit sql.NullInt64
-		err := rows.Scan(&group.ID, &group.Name, &group.HasMemberLimit, &memberLimit, &group.Description, &group.Subject, &group.Location, &group.CreatedAt, &group.UpdatedAt, &group.Visibility)
+		err := rows.Scan(&group.ID, &group.Name, &group.HasMemberLimit, &memberLimit, &group.Description, &group.Subject, &group.Location, &group.Visibility, &group.CreatedAt, &group.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
