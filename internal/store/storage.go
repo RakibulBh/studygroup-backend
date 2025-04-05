@@ -68,6 +68,8 @@ type Storage struct {
 	}
 	Session interface {
 		CreateStudySession(ctx context.Context, session *StudySession) (int, error)
+		DeleteStudySession(ctx context.Context, sessionID int) error
+		GetStudySessionByID(ctx context.Context, sessionID int) (StudySession, error)
 		GetUserStudySessions(ctx context.Context, userID int) ([]StudySession, error)
 		GetGroupStudySessions(ctx context.Context, groupID int) ([]StudySession, error)
 	}

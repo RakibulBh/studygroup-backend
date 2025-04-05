@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -92,4 +93,35 @@ func (s *SessionStore) GetGroupStudySessions(ctx context.Context, groupID int) (
 	}
 
 	return sessions, nil
+}
+
+func (s *SessionStore) GetStudySessionByID(ctx context.Context, sessionID int) (StudySession, error) {
+	query := `
+		SELECT id, group_id, title, description, location, start_time, end_time, created_at
+		FROM study_sessions
+		WHERE id = $1
+	`
+
+	var session StudySession
+	err := s.db.QueryRowContext(ctx, query, sessionID).Scan(&session.ID, &session.GroupID, &session.Title, &session.Description, &session.Location, &session.StartTime, &session.EndTime, &session.CreatedAt)
+	if err != nil {
+		switch err {
+		case sql.ErrNoRows:
+			return StudySession{}, errors.New("study session not found")
+		default:
+			return StudySession{}, err
+		}
+	}
+	return session, nil
+}
+
+func (s *SessionStore) DeleteStudySession(ctx context.Context, sessionID int) error {
+	query := `
+		DELETE FROM study_sessions WHERE id = $1
+	`
+	_, err := s.db.ExecContext(ctx, query, sessionID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

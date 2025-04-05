@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -112,4 +113,48 @@ func (app *application) GetUserStudySessions(w http.ResponseWriter, r *http.Requ
 	}
 
 	app.writeJSON(w, http.StatusOK, "User study sessions fetched successfully", sessions)
+}
+
+func (app *application) DeleteStudySession(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "sessionID")
+
+	sessionIDInt, err := strconv.Atoi(sessionID)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	user := r.Context().Value(userCtx).(store.User)
+	ctx := r.Context()
+
+	// Check if session id exists
+	session, err := app.store.Session.GetStudySessionByID(ctx, sessionIDInt)
+	if err != nil {
+		switch err {
+		case sql.ErrNoRows:
+			app.notFoundResponse(w, r, errors.New("study session does not exist"))
+		default:
+			app.internalServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	// Check if user is admin
+	isAdmin, err := app.store.GroupMembership.IsAdmin(ctx, session.GroupID, user.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+	if !isAdmin {
+		app.badRequestResponse(w, r, errors.New("user is not admin"))
+		return
+	}
+
+	err = app.store.Session.DeleteStudySession(ctx, session.ID)
+	if err != nil {
+		app.internalServerErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Study session deleted successfully", nil)
 }
