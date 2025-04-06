@@ -26,8 +26,8 @@ type Storage struct {
 		GenerateJWT(userID int, expiresAt time.Time, secret string) (string, error)
 		VerifyToken(tokenString string, secret string) (*jwt.Token, error)
 		StoreRefreshToken(ctx context.Context, userID int, token string, expiresAt time.Time) error
-		RefreshToken(ctx context.Context, userID int, tokenString string, secret string, refreshExp time.Duration, accessExp time.Duration) (string, string, error)
-		DeleteRefreshToken(ctx context.Context, userID int) error
+		RefreshToken(ctx context.Context, userID int, secret string, refreshExp time.Duration, accessExp time.Duration) (string, string, error)
+		DeleteRefreshTokens(ctx context.Context, userID int) error
 	}
 	User interface {
 		GetUserByID(ctx context.Context, id int) (User, error)

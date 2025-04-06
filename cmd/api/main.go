@@ -22,8 +22,8 @@ func main() {
 		},
 		auth: auth{
 			jwtSecret:  env.GetString("AUTH_SECRET", "VERYSECRET"),
-			exp:        env.GetDuration("AUTH_EXP", time.Minute*15),
-			refreshExp: env.GetDuration("AUTH_REFRESH_EXP", (time.Hour*24)*7), // 7 days
+			exp:        env.GetDuration("AUTH_EXP", time.Second*10),
+			refreshExp: env.GetDuration("AUTH_REFRESH_EXP", time.Second*60),
 		},
 	}
 

@@ -109,17 +109,7 @@ func (s *AuthStore) VerifyToken(tokenString string, secret string) (*jwt.Token, 
 	return token, nil
 }
 
-func (s *AuthStore) RefreshToken(ctx context.Context, userID int, tokenString string, secret string, refreshExp time.Duration, accessExp time.Duration) (string, string, error) {
-
-	// Delete the old refresh token
-	query := `
-		DELETE FROM refresh_tokens
-		WHERE token = $1 AND user_id = $2
-	`
-	_, err := s.db.ExecContext(ctx, query, tokenString, userID)
-	if err != nil {
-		return "", "", err
-	}
+func (s *AuthStore) RefreshToken(ctx context.Context, userID int, secret string, refreshExp time.Duration, accessExp time.Duration) (string, string, error) {
 
 	// Generate a new refresh token
 	refreshToken, err := s.GenerateJWT(userID, time.Now().Add(refreshExp), secret)
@@ -134,19 +124,20 @@ func (s *AuthStore) RefreshToken(ctx context.Context, userID int, tokenString st
 	}
 
 	// Generate a new access token
-	tokenString, err = s.GenerateJWT(userID, time.Now().Add(accessExp), secret)
+	newAccessToken, err := s.GenerateJWT(userID, time.Now().Add(accessExp), secret)
 	if err != nil {
 		return "", "", err
 	}
 
-	return tokenString, refreshToken, nil
+	return newAccessToken, refreshToken, nil
 }
 
-func (s *AuthStore) DeleteRefreshToken(ctx context.Context, userID int) error {
+func (s *AuthStore) DeleteRefreshTokens(ctx context.Context, userID int) error {
 	query := `
 		DELETE FROM refresh_tokens
 		WHERE user_id = $1
 	`
+
 	_, err := s.db.ExecContext(ctx, query, userID)
 	if err != nil {
 		return err

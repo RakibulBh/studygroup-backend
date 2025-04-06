@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -24,7 +23,6 @@ type StudySession struct {
 }
 
 func (app *application) GetGroupStudySessions(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Getting")
 
 	// Get group ID from URL param
 	groupID := chi.URLParam(r, "groupID")

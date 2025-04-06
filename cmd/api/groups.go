@@ -29,7 +29,6 @@ func (app *application) CreateGroup(w http.ResponseWriter, r *http.Request) {
 
 	// Get user id from context
 	user := r.Context().Value(userCtx).(store.User)
-	fmt.Println("User: ", user)
 
 	// Parse the request
 	var payload CreateGroupRequest
@@ -248,8 +247,6 @@ func (app *application) GetNearbyGroups(w http.ResponseWriter, r *http.Request) 
 		app.internalServerErrorResponse(w, r, err)
 		return
 	}
-
-	fmt.Println("Groups: ", groups)
 
 	// sort by distance
 	sort.Slice(groups, func(i, j int) bool {
